@@ -163,8 +163,8 @@
     <!-- ================================================================= -->
     <!-- APPLE FLOATING NAVIGATION BAR (SEGMENTED CONTROL)                -->
     <!-- ================================================================= -->
-    <header class="sticky top-4 z-50 px-4 sm:px-6 w-full flex justify-center pointer-events-none">
-      <nav class="pointer-events-auto flex items-center justify-between gap-3 sm:gap-6 px-4 py-2 rounded-full bg-[#18181b]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl max-w-4xl w-full">
+    <header class="sticky top-4 z-50 px-4 sm:px-6 w-full flex justify-center">
+      <nav class="flex items-center justify-between gap-3 sm:gap-6 px-4 py-2 rounded-full bg-[#18181b]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl max-w-4xl w-full">
         
         <!-- Left: Brand Title Only -->
         <div class="flex items-center pl-2 sm:pl-3">
@@ -970,13 +970,15 @@
         ]);
 
         // Computed Aggregates
-        const onlineCount = computed(() => servers.value.filter(s => s.is_online).length);
-        const totalRamUsedMB = computed(() => servers.value.reduce((sum, s) => sum + (s.memory.used / (1024*1024)), 0));
-        const totalDiskUsedGB = computed(() => servers.value.reduce((sum, s) => sum + (s.disk.used / (1024*1024*1024)), 0));
-        const totalRxSpeed = computed(() => servers.value.reduce((sum, s) => sum + s.network.speed_rx_bps, 0));
-        const totalTxSpeed = computed(() => servers.value.reduce((sum, s) => sum + s.network.speed_tx_bps, 0));
+        const onlineCount = computed(() => (servers.value || []).filter(s => s && s.is_online).length);
+        const totalRamUsedMB = computed(() => (servers.value || []).reduce((sum, s) => sum + ((s && s.memory && typeof s.memory.used === 'number') ? s.memory.used / (1024*1024) : 0), 0));
+        const totalDiskUsedGB = computed(() => (servers.value || []).reduce((sum, s) => sum + ((s && s.disk && typeof s.disk.used === 'number') ? s.disk.used / (1024*1024*1024) : 0), 0));
+        const totalRxSpeed = computed(() => (servers.value || []).reduce((sum, s) => sum + ((s && s.network && typeof s.network.speed_rx_bps === 'number') ? s.network.speed_rx_bps : 0), 0));
+        const totalTxSpeed = computed(() => (servers.value || []).reduce((sum, s) => sum + ((s && s.network && typeof s.network.speed_tx_bps === 'number') ? s.network.speed_tx_bps : 0), 0));
         const averageClusterCpu = computed(() => {
-          return servers.value.reduce((sum, s) => sum + s.cpu_percent, 0) / servers.value.length;
+          if (!servers.value || servers.value.length === 0) return 0;
+          const total = servers.value.reduce((sum, s) => sum + ((s && typeof s.cpu_percent === 'number') ? s.cpu_percent : 0), 0);
+          return total / servers.value.length;
         });
 
         // Apple HIG Load Colors: Safe < 60% (System Blue), Warning 60-85% (System Orange), Critical > 85% (System Red)
@@ -1098,169 +1100,189 @@
         // Master Chart Rendering (Apple Health / Activity / Instruments Graph Style)
         function renderCharts() {
           nextTick(() => {
-            const ctx = document.getElementById('masterTelemetryChart');
-            if (!ctx) return;
+            try {
+              const ctx = document.getElementById('masterTelemetryChart');
+              if (!ctx) return;
 
-            let timeLabels = [];
-            let vps1Data = [];
-            let vps2Data = [];
-            let vps3Data = [];
-            let rxData = [];
-            let txData = [];
+              let timeLabels = [];
+              let vps1Data = [];
+              let vps2Data = [];
+              let vps3Data = [];
+              let rxData = [];
+              let txData = [];
 
-            if (timeRange.value === 'Live') {
-              timeLabels = liveHistory.value.labels;
-              vps1Data = liveHistory.value.vps1;
-              vps2Data = liveHistory.value.vps2;
-              vps3Data = liveHistory.value.vps3;
-              rxData = liveHistory.value.rx;
-              txData = liveHistory.value.tx;
-            } else {
-              const h = chartHistory.value;
-              timeLabels = (h && h.labels) ? h.labels : (timeRange.value === '1h'
-                ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
-                : timeRange.value === '6h'
-                ? ['6h', '5h', '4h', '3h', '2h', '1h', 'Now']
-                : timeRange.value === '24h'
-                ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
-                : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now']);
+              if (timeRange.value === 'Live') {
+                timeLabels = [...liveHistory.value.labels];
+                vps1Data = [...liveHistory.value.vps1];
+                vps2Data = [...liveHistory.value.vps2];
+                vps3Data = [...liveHistory.value.vps3];
+                rxData = [...liveHistory.value.rx];
+                txData = [...liveHistory.value.tx];
+              } else {
+                const h = chartHistory.value;
+                timeLabels = (h && h.labels) ? h.labels : (timeRange.value === '1h'
+                  ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
+                  : timeRange.value === '6h'
+                  ? ['6h', '5h', '4h', '3h', '2h', '1h', 'Now']
+                  : timeRange.value === '24h'
+                  ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
+                  : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now']);
 
-              vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
-                ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
-                : [1.9, 2.3, 4.1, 3.0, 2.4, 2.7, servers.value[0].cpu_percent];
+                const s1 = (servers.value || []).find(s => s && s.id === 'vps1');
+                const s2 = (servers.value || []).find(s => s && s.id === 'vps2');
+                const s3 = (servers.value || []).find(s => s && s.id === 'vps3');
 
-              vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
-                ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
-                : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, servers.value[1].cpu_percent];
+                vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
+                  ? [...h.cpuSeries.vps1.slice(0, -1), s1 ? s1.cpu_percent : 0]
+                  : [1.9, 2.3, 4.1, 3.0, 2.4, 2.7, s1 ? s1.cpu_percent : 0];
 
-              vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
-                ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
-                : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, servers.value[2].cpu_percent];
+                vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
+                  ? [...h.cpuSeries.vps2.slice(0, -1), s2 ? s2.cpu_percent : 0]
+                  : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, s2 ? s2.cpu_percent : 0];
 
-              rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
-                ? [...h.bandwidthSeries.rx.slice(0, -1), parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))]
-                : [0.9, 1.3, 1.6, 1.2, 1.4, 1.3, parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))];
+                vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
+                  ? [...h.cpuSeries.vps3.slice(0, -1), s3 ? s3.cpu_percent : 0]
+                  : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, s3 ? s3.cpu_percent : 0];
 
-              txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
-                ? [...h.bandwidthSeries.tx.slice(0, -1), parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))]
-                : [0.4, 0.5, 0.7, 0.6, 0.4, 0.5, parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))];
-            }
+                const curRxMb = parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2)) || 0;
+                const curTxMb = parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2)) || 0;
 
-            const datasets = chartMode.value === 'cpu' ? [
-              {
-                label: 'VPS 1 (Tokyo Win 2022)',
-                data: vps1Data,
-                borderColor: '#0a84ff', // Apple System Blue
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 2,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'VPS 2 (Ubuntu Beszel)',
-                data: vps2Data,
-                borderColor: '#8e8e93', // Apple System Gray 1
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'VPS 3 (Debian Worker)',
-                data: vps3Data,
-                borderColor: '#636366', // Apple System Gray 2 Dashed
-                borderDash: [4, 4],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
+                rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+                  ? [...h.bandwidthSeries.rx.slice(0, -1), curRxMb]
+                  : [0.9, 1.3, 1.6, 1.2, 1.4, 1.3, curRxMb];
+
+                txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+                  ? [...h.bandwidthSeries.tx.slice(0, -1), curTxMb]
+                  : [0.4, 0.5, 0.7, 0.6, 0.4, 0.5, curTxMb];
               }
-            ] : [
-              {
-                label: 'Inbound RX (Combined)',
-                data: rxData,
-                borderColor: '#0a84ff', // Apple System Blue
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 2,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'Outbound TX (Combined)',
-                data: txData,
-                borderColor: '#8e8e93', // Apple System Gray 1 Dashed
-                borderDash: [3, 3],
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              }
-            ];
 
-            if (masterChartInstance) {
-              masterChartInstance.data.labels = timeLabels;
-              masterChartInstance.data.datasets = datasets;
-              if (masterChartInstance.options && masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
-                masterChartInstance.options.scales.y.suggestedMax = chartMode.value === 'cpu' 
-                  ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(Math.max(...vps1Data, ...vps2Data, ...vps3Data) * 1.5)) : 100)
-                  : Math.max(5, Math.ceil(Math.max(...rxData, ...txData) * 1.4));
-              }
-              masterChartInstance.update(timeRange.value === 'Live' ? 'none' : undefined);
-              return;
-            }
-
-            masterChartInstance = new Chart(ctx, {
-              type: 'line',
-              data: { labels: timeLabels, datasets },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 300 },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    backgroundColor: 'rgba(28, 28, 32, 0.95)',
-                    titleColor: '#ffffff',
-                    bodyColor: '#f5f5f7',
-                    borderColor: 'rgba(255, 255, 255, 0.16)',
-                    borderWidth: 0.5,
-                    padding: 10,
-                    cornerRadius: 10,
-                    titleFont: { family: '-apple-system, "SF Pro Text", sans-serif', size: 12, weight: '600' },
-                    bodyFont: { family: '"SF Mono", monospace', size: 11 }
-                  }
+              const datasets = chartMode.value === 'cpu' ? [
+                {
+                  label: 'VPS 1 (Tokyo Win 2022)',
+                  data: vps1Data,
+                  borderColor: '#0a84ff',
+                  backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                  fill: true,
+                  tension: 0.35,
+                  borderWidth: 2,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5
                 },
-                scales: {
-                  x: {
-                    grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
-                    ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 10 } }
+                {
+                  label: 'VPS 2 (Ubuntu Beszel)',
+                  data: vps2Data,
+                  borderColor: '#8e8e93',
+                  backgroundColor: 'transparent',
+                  fill: false,
+                  tension: 0.35,
+                  borderWidth: 1.8,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5
+                },
+                {
+                  label: 'VPS 3 (Debian Worker)',
+                  data: vps3Data,
+                  borderColor: '#636366',
+                  borderDash: [4, 4],
+                  backgroundColor: 'transparent',
+                  fill: false,
+                  tension: 0.35,
+                  borderWidth: 1.8,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5
+                }
+              ] : [
+                {
+                  label: 'Inbound RX (Combined)',
+                  data: rxData,
+                  borderColor: '#0a84ff',
+                  backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                  fill: true,
+                  tension: 0.35,
+                  borderWidth: 2,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5
+                },
+                {
+                  label: 'Outbound TX (Combined)',
+                  data: txData,
+                  borderColor: '#8e8e93',
+                  borderDash: [3, 3],
+                  fill: false,
+                  tension: 0.35,
+                  borderWidth: 1.8,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5
+                }
+              ];
+
+              if (masterChartInstance) {
+                // If dataset count changed, destroy cleanly
+                if (masterChartInstance.data.datasets.length !== datasets.length) {
+                  masterChartInstance.destroy();
+                  masterChartInstance = null;
+                } else {
+                  masterChartInstance.data.labels = timeLabels;
+                  datasets.forEach((ds, i) => {
+                    masterChartInstance.data.datasets[i].data = ds.data;
+                    masterChartInstance.data.datasets[i].label = ds.label;
+                  });
+                  if (masterChartInstance.options && masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
+                    const maxCpu = Math.max(1, ...vps1Data, ...vps2Data, ...vps3Data);
+                    const maxBw = Math.max(1, ...rxData, ...txData);
+                    masterChartInstance.options.scales.y.suggestedMax = chartMode.value === 'cpu' 
+                      ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(maxCpu * 1.5)) : 100)
+                      : Math.max(5, Math.ceil(maxBw * 1.4));
+                  }
+                  masterChartInstance.update('none');
+                  return;
+                }
+              }
+
+              masterChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: timeLabels, datasets },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  animation: { duration: 250 },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: 'rgba(28, 28, 32, 0.95)',
+                      titleColor: '#ffffff',
+                      bodyColor: '#f5f5f7',
+                      borderColor: 'rgba(255, 255, 255, 0.16)',
+                      borderWidth: 0.5,
+                      padding: 10,
+                      cornerRadius: 10,
+                      titleFont: { family: '-apple-system, "SF Pro Text", sans-serif', size: 12, weight: '600' },
+                      bodyFont: { family: '"SF Mono", monospace', size: 11 }
+                    }
                   },
-                  y: {
-                    min: 0,
-                    suggestedMax: chartMode.value === 'cpu' 
-                      ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(Math.max(...vps1Data, ...vps2Data, ...vps3Data) * 1.5)) : 100)
-                      : Math.max(5, Math.ceil(Math.max(...rxData, ...txData) * 1.4)),
-                    grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
-                    ticks: {
-                      color: '#8e8e93',
-                      font: { family: '"SF Mono", monospace', size: 10 },
-                      callback: function(val) {
-                        return chartMode.value === 'cpu' ? val + '%' : val + ' MB/s';
+                  scales: {
+                    x: {
+                      grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                      ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 10 } }
+                    },
+                    y: {
+                      min: 0,
+                      suggestedMax: chartMode.value === 'cpu' ? 10 : 5,
+                      grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                      ticks: {
+                        color: '#8e8e93',
+                        font: { family: '"SF Mono", monospace', size: 10 },
+                        callback: function(val) {
+                          return chartMode.value === 'cpu' ? val + '%' : val + ' MB/s';
+                        }
                       }
                     }
                   }
                 }
-              }
-            });
+              });
+            } catch (err) {
+              console.warn('Non-fatal chart render notice:', err);
+            }
           });
         }
 

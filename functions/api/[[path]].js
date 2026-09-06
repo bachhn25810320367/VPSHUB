@@ -154,7 +154,17 @@ export async function onRequest(context) {
       let latest = docs[0];
       const isOnline = latest ? (nowSec - latest.timestamp <= 90) : false;
 
-      if (!latest) {
+      if (latest) {
+        if (!latest.memory || typeof latest.memory.used !== 'number') {
+          latest.memory = { total: 1073741824, used: 0, free: 1073741824, percent: 0 };
+        }
+        if (!latest.disk || typeof latest.disk.used !== 'number') {
+          latest.disk = { total: 32212254720, used: 0, free: 32212254720, percent: 0 };
+        }
+        if (!latest.network || typeof latest.network.speed_rx_bps !== 'number') {
+          latest.network = { bytes_recv: 0, bytes_sent: 0, speed_rx_bps: 0, speed_tx_bps: 0 };
+        }
+      } else {
         latest = {
           vps_id: srv.id,
           name: srv.name,
