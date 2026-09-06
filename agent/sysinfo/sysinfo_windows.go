@@ -18,6 +18,7 @@ var (
 	procGlobalMemoryStatus = kernel32.NewProc("GlobalMemoryStatusEx")
 	procGetSystemTimes    = kernel32.NewProc("GetSystemTimes")
 	procGetDiskFreeSpace  = kernel32.NewProc("GetDiskFreeSpaceExW")
+	procGetTickCount64     = kernel32.NewProc("GetTickCount64")
 
 	prevWinIdle   uint64
 	prevWinKernel uint64
@@ -47,11 +48,17 @@ func fileTimeToUint64(ft fileTime) uint64 {
 }
 
 func CollectMetrics(vpsID, name string) (*SystemMetrics, error) {
+	now := time.Now().Unix()
+	uptimeSec := getWindowsUptime()
+	bootTime := now - uptimeSec
+
 	metrics := &SystemMetrics{
 		VPSID:     vpsID,
 		Name:      name,
 		OS:        "windows",
-		Timestamp: time.Now().Unix(),
+		Timestamp: now,
+		BootTime:  bootTime,
+		Uptime:    uptimeSec,
 	}
 
 	metrics.CPUPercent = getWindowsCPUPercent()
@@ -60,6 +67,11 @@ func CollectMetrics(vpsID, name string) (*SystemMetrics, error) {
 	metrics.Network = getWindowsNetwork()
 
 	return metrics, nil
+}
+
+func getWindowsUptime() int64 {
+	ret, _, _ := procGetTickCount64.Call()
+	return int64(ret / 1000)
 }
 
 func getWindowsMemory() MemoryInfo {

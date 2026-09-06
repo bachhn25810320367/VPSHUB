@@ -19,11 +19,16 @@ var (
 )
 
 func CollectMetrics(vpsID, name string) (*SystemMetrics, error) {
+	now := time.Now().Unix()
+	bootTime, uptime := getLinuxBootTimeAndUptime()
+
 	metrics := &SystemMetrics{
 		VPSID:     vpsID,
 		Name:      name,
 		OS:        "linux",
-		Timestamp: time.Now().Unix(),
+		Timestamp: now,
+		BootTime:  bootTime,
+		Uptime:    uptime,
 	}
 
 	metrics.CPUPercent = getLinuxCPUPercent()
@@ -32,6 +37,45 @@ func CollectMetrics(vpsID, name string) (*SystemMetrics, error) {
 	metrics.Network = getLinuxNetwork()
 
 	return metrics, nil
+}
+
+func getLinuxBootTimeAndUptime() (int64, int64) {
+	var bootTime int64
+	if file, err := os.Open("/proc/stat"); err == nil {
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "btime ") {
+				fields := strings.Fields(line)
+				if len(fields) >= 2 {
+					if bt, err := strconv.ParseInt(fields[1], 10, 64); err == nil {
+						bootTime = bt
+						break
+					}
+				}
+			}
+		}
+		file.Close()
+	}
+
+	var uptimeSec int64
+	if data, err := os.ReadFile("/proc/uptime"); err == nil {
+		fields := strings.Fields(string(data))
+		if len(fields) > 0 {
+			if upF, err := strconv.ParseFloat(fields[0], 64); err == nil {
+				uptimeSec = int64(upF)
+			}
+		}
+	}
+
+	now := time.Now().Unix()
+	if bootTime == 0 && uptimeSec > 0 {
+		bootTime = now - uptimeSec
+	} else if bootTime > 0 && uptimeSec == 0 {
+		uptimeSec = now - bootTime
+	}
+
+	return bootTime, uptimeSec
 }
 
 func getLinuxCPUPercent() float64 {

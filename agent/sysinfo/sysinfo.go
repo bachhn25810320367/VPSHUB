@@ -28,6 +28,8 @@ type SystemMetrics struct {
 	Name       string      `json:"name"`
 	OS         string      `json:"os"`
 	Timestamp  int64       `json:"timestamp"`
+	BootTime   int64       `json:"boot_time"`
+	Uptime     int64       `json:"uptime"`
 	CPUPercent float64     `json:"cpu_percent"`
 	Memory     MemoryInfo  `json:"memory"`
 	Disk       DiskInfo    `json:"disk"`
