@@ -24,7 +24,7 @@ const memoryStore = {
   servers: [
     {
       id: "vps1",
-      name: "VPS 1 (Tokyo Win 2022)",
+      name: "vps 1 (Window Server)",
       os: "windows",
       ip: "20.44.176.166",
       location: "Tokyo, JP",
@@ -39,7 +39,7 @@ const memoryStore = {
     },
     {
       id: "vps2",
-      name: "VPS 2 (Ubuntu Beszel Hub)",
+      name: "vps2 (Ubuntu)",
       os: "linux",
       ip: "20.89.130.95",
       location: "East Asia",
@@ -54,7 +54,7 @@ const memoryStore = {
     },
     {
       id: "vps3",
-      name: "VPS 3 (Debian 12 Worker)",
+      name: "vps3 (Debian)",
       os: "linux",
       ip: "20.89.131.102",
       location: "Southeast Asia",

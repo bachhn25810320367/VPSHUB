@@ -254,41 +254,10 @@
           
           <!-- Master Telemetry Chart Hero Tile (8 cols) -->
           <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
-            <!-- Header with Metric Toggles, Series Legend and Timescale -->
+                        <!-- Header with Metric Toggles, Series Legend and Timescale -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
               <div>
-                <div class="flex items-center gap-3">
-                  <div class="w-2 h-2 rounded-full bg-[#0a84ff]"></div>
-                  <div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
-                      <span v-if="timeRange === 'Live'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#30d158]/10 text-[#30d158] text-[10px] font-mono border border-[#30d158]/25 shadow-[0_0_10px_rgba(48,209,88,0.15)]">
-                        <span class="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-ping"></span>
-                        TASKMGR WAVE
-                      </span>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.06] text-[#8e8e93] text-[10px] font-mono border border-white/10">
-                        Scale: 0 – {{ currentYScaleMax }}{{ chartMode === 'network' ? ' MB/s' : '%' }} {{ chartMode === 'ram' ? 'RAM' : (chartMode === 'cpu' ? 'CPU' : '') }}
-                      </span>
-                    </div>
-                    <p class="text-xs text-[#8e8e93]">Rolling buffer 20s (Shift &amp; Push) • Auto-zoom for micro-waves</p>
-                  </div>
-                </div>
-
-                <!-- Apple Style Series Legend -->
-                <div v-if="chartMode === 'ram'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5 flex-wrap">
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-1 bg-[#ff453a] inline-block rounded-full shadow-[0_0_6px_rgba(255,69,58,0.5)]"></span> VPS 1: Win 2022 (~95% Heavy)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-1 bg-[#0a84ff] inline-block rounded-full"></span> VPS 2: Ubuntu (~53% Mid)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-1 bg-[#30d158] inline-block rounded-full"></span> VPS 3: Debian (~48% Lean)</span>
-                </div>
-                <div v-else-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5 flex-wrap">
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> VPS 1 (Tokyo)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> VPS 2 (Ubuntu)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> VPS 3 (Debian)</span>
-                </div>
-                <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5 flex-wrap">
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] border-b border-dashed border-[#8e8e93] inline-block"></span> Outbound TX</span>
-                </div>
+                <h2 class="text-sm font-semibold tracking-wider text-white uppercase">STREAM</h2>
               </div>
 
               <div class="flex items-center gap-2 self-start sm:self-center">
@@ -444,9 +413,9 @@
                   </div>
                   <div>
                     <h3 class="text-sm font-semibold text-white tracking-headline group-hover:text-[#0a84ff] transition-colors">
-                      {{ srv.name }}
+                      {{ getServerDisplayName(srv) }}
                     </h3>
-                    <p class="text-[11px] text-[#8e8e93]"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
+                    <p v-if="srv.ip && srv.location" class="text-[11px] text-[#8e8e93] mt-0.5"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
                   </div>
                 </div>
 
@@ -940,7 +909,7 @@
         const servers = ref([
           {
             id: 'vps1',
-            name: 'VPS 1 (Tokyo Win 2022)',
+            name: 'vps 1 (Window Server)',
             os: 'windows',
             ip: '20.44.176.166',
             location: 'Tokyo, JP',
@@ -954,7 +923,7 @@
           },
           {
             id: 'vps2',
-            name: 'VPS 2 (Ubuntu Beszel Hub)',
+            name: 'vps2 (Ubuntu)',
             os: 'linux',
             ip: '20.89.130.95',
             location: 'East Asia',
@@ -968,7 +937,7 @@
           },
           {
             id: 'vps3',
-            name: 'VPS 3 (Debian 12 Worker)',
+            name: 'vps3 (Debian)',
             os: 'linux',
             ip: '20.89.131.102',
             location: 'Southeast Asia',
@@ -1000,6 +969,14 @@
         }
 
         // Server Detail Modal
+        function getServerDisplayName(srv) {
+          if (!srv) return '';
+          if (srv.id === 'vps1') return 'vps 1 (Window Server)';
+          if (srv.id === 'vps2') return 'vps2 (Ubuntu)';
+          if (srv.id === 'vps3') return 'vps3 (Debian)';
+          return srv.name || srv.id;
+        }
+
         const activeServerModal = ref(null);
         function openServerDetail(srv) {
           activeServerModal.value = srv;
@@ -1292,116 +1269,11 @@
           if (timeRange.value === 'Live') {
             timeLabels = [...rollingBuffer.labels];
             if (chartMode.value === 'ram') {
-              series1 = [...rollingBuffer.ramVps1];
-              series2 = [...rollingBuffer.ramVps2];
-              series3 = [...rollingBuffer.ramVps3];
-            } else {
-              series1 = [...rollingBuffer.cpuVps1];
-              series2 = [...rollingBuffer.cpuVps2];
-              series3 = [...rollingBuffer.cpuVps3];
-            }
-            rxData = [...rollingBuffer.rx];
-            txData = [...rollingBuffer.tx];
-          } else {
-            const h = chartHistory.value;
-            const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
-            timeLabels = (h && h.labels) ? h.labels : baseline.labels;
-
-            if (chartMode.value === 'ram') {
-              const liveRam1 = Number(servers.value[0]?.memory?.percent || 95.2);
-              const liveRam2 = Number(servers.value[1]?.memory?.percent || 53.3);
-              const liveRam3 = Number(servers.value[2]?.memory?.percent || 47.9);
-
-              series1 = (h && h.ramSeries && h.ramSeries.vps1)
-                ? [...h.ramSeries.vps1.slice(0, -1), liveRam1]
-                : [...baseline.ram.vps1, liveRam1];
-              series2 = (h && h.ramSeries && h.ramSeries.vps2)
-                ? [...h.ramSeries.vps2.slice(0, -1), liveRam2]
-                : [...baseline.ram.vps2, liveRam2];
-              series3 = (h && h.ramSeries && h.ramSeries.vps3)
-                ? [...h.ramSeries.vps3.slice(0, -1), liveRam3]
-                : [...baseline.ram.vps3, liveRam3];
-            } else {
-              const liveCpu1 = Number(servers.value[0]?.cpu_percent || 1.5);
-              const liveCpu2 = Number(servers.value[1]?.cpu_percent || 0.3);
-              const liveCpu3 = Number(servers.value[2]?.cpu_percent || 0.5);
-
-              series1 = (h && h.cpuSeries && h.cpuSeries.vps1)
-                ? [...h.cpuSeries.vps1.slice(0, -1), liveCpu1]
-                : [...baseline.cpu.vps1, liveCpu1];
-              series2 = (h && h.cpuSeries && h.cpuSeries.vps2)
-                ? [...h.cpuSeries.vps2.slice(0, -1), liveCpu2]
-                : [...baseline.cpu.vps2, liveCpu2];
-              series3 = (h && h.cpuSeries && h.cpuSeries.vps3)
-                ? [...h.cpuSeries.vps3.slice(0, -1), liveCpu3]
-                : [...baseline.cpu.vps3, liveCpu3];
-            }
-
-            const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
-            const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
-
-            rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
-              ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
-              : [...baseline.rx, currentRxMbps];
-
-            txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
-              ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
-              : [...baseline.tx, currentTxMbps];
-          }
-
-          // Auto-Scale Calculations
-          let targetYMax = 100;
-          if (chartMode.value === 'ram') {
-            targetYMax = 100; // RAM Load uses full 0 - 100% canvas (95%, 53%, 48% clearly visible and filling the screen!)
-          } else if (chartMode.value === 'cpu') {
-            const allCpuVals = [...series1, ...series2, ...series3];
-            const peakVal = Math.max(...allCpuVals, 0.5);
-            if (peakVal <= 2.5) {
-              targetYMax = 3; // Super zoom for idle CPU so waves are clearly visible!
-            } else if (peakVal <= 6) {
-              targetYMax = 8;
-            } else if (peakVal <= 18) {
-              targetYMax = 25;
-            } else if (peakVal <= 45) {
-              targetYMax = 50;
-            } else {
-              targetYMax = 100;
-            }
-          } else {
-            // Bandwidth mode
-            const allBwVals = [...rxData, ...txData];
-            const peakBw = Math.max(...allBwVals, 0.2);
-            if (peakBw <= 2.5) {
-              targetYMax = 3;
-            } else if (peakBw <= 6) {
-              targetYMax = 8;
-            } else if (peakBw <= 15) {
-              targetYMax = 20;
-            } else {
-              targetYMax = Math.ceil(peakBw * 1.3);
-            }
-          }
-          currentYScaleMax.value = targetYMax;
-
-          masterChartInstance.data.labels = timeLabels;
-
-          if (chartMode.value === 'ram') {
-            // RAM Load Datasets: Red for Win 2022 (95%), Blue for Ubuntu (53%), Green for Debian (48%)
+            // RAM Load: Original Apple HIG Palette, ZERO Background Fill (Transparent pitch black OLED)
             masterChartInstance.data.datasets = [
               {
-                label: 'VPS 1 (Tokyo Win 2022 RAM)',
+                label: 'vps 1 (Window Server)',
                 data: series1,
-                borderColor: '#ff453a', // Apple System Red for heavy RAM load
-                backgroundColor: 'rgba(255, 69, 58, 0.10)',
-                fill: true,
-                tension: 0.35,
-                borderWidth: 2.2,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'VPS 2 (Ubuntu Beszel RAM)',
-                data: series2,
                 borderColor: '#0a84ff', // Apple System Blue
                 backgroundColor: 'transparent',
                 fill: false,
@@ -1411,34 +1283,45 @@
                 pointHoverRadius: 6
               },
               {
-                label: 'VPS 3 (Debian Worker RAM)',
+                label: 'vps2 (Ubuntu)',
+                data: series2,
+                borderColor: '#8e8e93', // Apple System Gray 1
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.35,
+                borderWidth: 1.8,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'vps3 (Debian)',
                 data: series3,
-                borderColor: '#30d158', // Apple System Green
+                borderColor: '#636366', // Apple System Gray 2 Dashed
                 borderDash: [4, 4],
                 backgroundColor: 'transparent',
                 fill: false,
                 tension: 0.35,
-                borderWidth: 2,
+                borderWidth: 1.8,
                 pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
                 pointHoverRadius: 6
               }
             ];
           } else if (chartMode.value === 'cpu') {
-            // CPU Load Datasets
+            // CPU Load: Original Apple HIG Palette, ZERO Background Fill
             masterChartInstance.data.datasets = [
               {
-                label: 'VPS 1 (Tokyo Win 2022 CPU)',
+                label: 'vps 1 (Window Server)',
                 data: series1,
                 borderColor: '#0a84ff',
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
+                backgroundColor: 'transparent',
+                fill: false,
                 tension: 0.35,
                 borderWidth: 2,
                 pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               },
               {
-                label: 'VPS 2 (Ubuntu Beszel CPU)',
+                label: 'vps2 (Ubuntu)',
                 data: series2,
                 borderColor: '#8e8e93',
                 backgroundColor: 'transparent',
@@ -1449,7 +1332,7 @@
                 pointHoverRadius: 6
               },
               {
-                label: 'VPS 3 (Debian Worker CPU)',
+                label: 'vps3 (Debian)',
                 data: series3,
                 borderColor: '#636366',
                 borderDash: [4, 4],
@@ -1462,14 +1345,14 @@
               }
             ];
           } else {
-            // Bandwidth Datasets
+            // Bandwidth: ZERO Background Fill
             masterChartInstance.data.datasets = [
               {
                 label: 'Inbound RX (Combined)',
                 data: rxData,
                 borderColor: '#0a84ff',
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
+                backgroundColor: 'transparent',
+                fill: false,
                 tension: 0.35,
                 borderWidth: 2,
                 pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
@@ -1480,6 +1363,7 @@
                 data: txData,
                 borderColor: '#8e8e93',
                 borderDash: [3, 3],
+                backgroundColor: 'transparent',
                 fill: false,
                 tension: 0.35,
                 borderWidth: 1.8,
@@ -1857,6 +1741,7 @@
           averageClusterCpu,
           getMetricColor,
           activeServerModal,
+          getServerDisplayName,
           openServerDetail,
           openDriveForCurrentServer,
           renderCharts,

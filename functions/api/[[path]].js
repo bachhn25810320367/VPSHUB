@@ -5,9 +5,9 @@
  */
 
 const DEFAULT_SERVERS = [
-  { id: "vps1", name: "VPS 1 (Tokyo Win 2022)", os: "windows", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
-  { id: "vps2", name: "VPS 2 (Ubuntu Beszel Hub)", os: "linux", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
-  { id: "vps3", name: "VPS 3 (Debian 12 Worker)", os: "linux", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
+  { id: "vps1", name: "vps 1 (Window Server)", os: "windows", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
+  { id: "vps2", name: "vps2 (Ubuntu)", os: "linux", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
+  { id: "vps3", name: "vps3 (Debian)", os: "linux", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
 ];
 
 async function getCosmosAuthHeader(verb, resourceType, resourceId, keyBase64, dateStr) {
