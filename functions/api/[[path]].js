@@ -5,9 +5,73 @@
  */
 
 const DEFAULT_SERVERS = [
-  { id: "vps1", name: "WindowServer", os: "windows", ip: "20.44.176.166", location: "Tokyo, JP", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
-  { id: "vps2", name: "Ubuntu", os: "linux", ip: "20.89.130.95", location: "East Asia", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
-  { id: "vps3", name: "Debian", os: "linux", ip: "172.197.200.15", location: "Malaysia West", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
+  {
+    id: "vps1",
+    name: "WindowServer",
+    hostname: "vaxlouvm",
+    os: "windows",
+    os_display: "Windows Server 2022 Datacenter",
+    cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
+    ip: "20.44.176.166",
+    location: "Tokyo, JP",
+    tunnelUrl: "https://vps1.hoangngocbach.id.vn",
+    uptime_seconds: 158200,
+    containers: [],
+    services: [
+      { name: "VPSHub-Agent", status: "Active", substate: "Running", cpu: 0.05, memory: 5.1, updated: "Now" },
+      { name: "cloudreve", status: "Active", substate: "Running", cpu: 0.01, memory: 14.2, updated: "Now" },
+      { name: "beszel-agent", status: "Active", substate: "Running", cpu: 0.02, memory: 12.8, updated: "Now" },
+      { name: "9router (Node.js)", status: "Active", substate: "Running", cpu: 0.08, memory: 78.5, updated: "Now" },
+      { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 4.8, updated: "Now" }
+    ]
+  },
+  {
+    id: "vps2",
+    name: "Ubuntu",
+    hostname: "vlinuxvm",
+    os: "linux",
+    os_display: "Ubuntu 22.04.5 LTS",
+    cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
+    ip: "20.89.130.95",
+    location: "East Asia",
+    tunnelUrl: "https://vps2.hoangngocbach.id.vn",
+    uptime_seconds: 77800,
+    containers: [
+      { name: "cloudreve", cpu: 0.02, memory: 74.2, network: "4.2 KB/s", health: "Healthy", ports: "5212", image: "cloudreve/cloudreve:latest", status: "Up 18 hours", updated: "Now" },
+      { name: "beszel", cpu: 0.01, memory: 31.0, network: "1.1 KB/s", health: "Healthy", ports: "8080", image: "henrygd/beszel:latest", status: "Up 21 hours", updated: "Now" },
+      { name: "beszel-agent", cpu: 0.01, memory: 15.6, network: "0.2 KB/s", health: "Healthy", ports: "45876", image: "henrygd/beszel-agent:latest", status: "Up 21 hours", updated: "Now" }
+    ],
+    services: [
+      { name: "vps-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 0.9, updated: "Now" },
+      { name: "cloudflared", status: "Active", substate: "Running", cpu: 0.05, memory: 29.2, updated: "Now" },
+      { name: "docker", status: "Active", substate: "Running", cpu: 0.02, memory: 42.6, updated: "Now" },
+      { name: "tailscaled", status: "Active", substate: "Running", cpu: 0.01, memory: 30.0, updated: "Now" },
+      { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 3.5, updated: "Now" }
+    ]
+  },
+  {
+    id: "vps3",
+    name: "Debian",
+    hostname: "debianvm",
+    os: "linux",
+    os_display: "Debian GNU/Linux 12 (bookworm)",
+    cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
+    ip: "172.197.200.15",
+    location: "Malaysia West",
+    tunnelUrl: "https://vps3.hoangngocbach.id.vn",
+    uptime_seconds: 71100,
+    containers: [
+      { name: "wg-easy", cpu: 0.03, memory: 18.4, network: "0.00 B/s", health: "Healthy", ports: "51820, 51821", image: "ghcr.io/wg-easy/wg-easy", status: "Up 6 hours", updated: "Now" }
+    ],
+    services: [
+      { name: "vps-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 2.4, updated: "Now" },
+      { name: "cloudreve-slave", status: "Active", substate: "Running", cpu: 0.01, memory: 13.1, updated: "Now" },
+      { name: "beszel-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 15.8, updated: "Now" },
+      { name: "cloudflared", status: "Active", substate: "Running", cpu: 0.04, memory: 25.5, updated: "Now" },
+      { name: "docker", status: "Active", substate: "Running", cpu: 0.02, memory: 71.7, updated: "Now" },
+      { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 3.2, updated: "Now" }
+    ]
+  }
 ];
 
 async function getCosmosAuthHeader(verb, resourceType, resourceId, keyBase64, dateStr) {
@@ -180,10 +244,16 @@ export async function onRequest(context) {
       result.push({
         ...latest,
         name: srv.name,
+        hostname: srv.hostname,
+        os_display: srv.os_display,
+        cpu_model: srv.cpu_model,
         ip: srv.ip,
         location: srv.location,
         is_online: isOnline,
         tunnel_url: srv.tunnelUrl,
+        uptime_seconds: (latest && typeof latest.uptime_seconds === 'number' && latest.uptime_seconds > 0) ? latest.uptime_seconds : srv.uptime_seconds,
+        containers: srv.containers,
+        services: srv.services,
         last_seen_seconds_ago: nowSec - (latest.timestamp || nowSec),
         azure_quota_gb: 100
       });

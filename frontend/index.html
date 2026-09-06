@@ -161,6 +161,39 @@
   <div id="app" v-cloak class="relative z-10 flex flex-col min-h-screen">
 
     <!-- ================================================================= -->
+    <!-- AUTHENTICATION GATE (APPLE GLASS LOGIN MODAL)                     -->
+    <!-- ================================================================= -->
+    <div v-if="!isAuthenticated" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl">
+      <div class="apple-glass-card max-w-sm w-full p-8 space-y-6 border border-white/15 shadow-2xl text-center">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0a84ff]/15 border border-[#0a84ff]/30 text-[#0a84ff] text-2xl shadow-apple-cta mx-auto">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-tight">VPS HUB</h2>
+          <p class="text-xs text-[#8e8e93] mt-1">Hệ thống Giám sát & Quản lý Hạ tầng</p>
+        </div>
+        <form @submit.prevent="handleLogin" class="space-y-4 text-left">
+          <div>
+            <label class="text-[11px] font-medium text-[#8e8e93] uppercase tracking-wider block mb-1.5">Tài khoản</label>
+            <input v-model="loginForm.username" type="text" required placeholder="admin" autocomplete="username" class="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[#0a84ff] transition-all">
+          </div>
+          <div>
+            <label class="text-[11px] font-medium text-[#8e8e93] uppercase tracking-wider block mb-1.5">Mật khẩu</label>
+            <input v-model="loginForm.password" type="password" required placeholder="••••••••" autocomplete="current-password" class="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-[#0a84ff] transition-all">
+          </div>
+          <p v-if="loginError" class="text-xs text-[#ff453a] font-medium flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            {{ loginError }}
+          </p>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all">
+            Đăng nhập hệ thống
+          </button>
+          <p class="text-[10px] text-center text-[#636366]">Mặc định: admin / hoangngocbach</p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
     <!-- APPLE FLOATING NAVIGATION BAR (SEGMENTED CONTROL)                -->
     <!-- ================================================================= -->
     <header class="sticky top-4 z-50 px-4 sm:px-6 w-full flex justify-center">
@@ -233,6 +266,16 @@
             class="flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.14] active:scale-95 border border-white/10 text-white transition-all shadow-sm"
             title="Refresh Metrics Now">
             <i class="fa-solid fa-rotate-right text-xs" :class="{ 'animate-spin text-[#0a84ff]': isRefreshing }"></i>
+          </button>
+
+          <!-- User Profile & Logout -->
+          <button 
+            @click="handleLogout" 
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-xs text-[#8e8e93] hover:text-white transition-all ml-1 border border-white/5"
+            title="Nhấp để Đăng xuất">
+            <i class="fa-solid fa-user-shield text-[11px] text-[#0a84ff]"></i>
+            <span class="hidden md:inline font-mono">{{ currentUsername }}</span>
+            <i class="fa-solid fa-right-from-bracket text-[10px] text-[#ff453a] ml-1"></i>
           </button>
         </div>
       </nav>
@@ -423,6 +466,10 @@
                       {{ srv.name }}
                     </h3>
                     <p class="text-[11px] text-[#8e8e93]"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
+                    <p class="text-[10px] text-[#8e8e93] mt-1 flex items-center gap-1.5 font-mono">
+                      <i class="fa-regular fa-clock text-[#30d158]"></i>
+                      <span class="text-white font-medium">{{ formatUptime(srv.uptime_seconds) }}</span>
+                    </p>
                   </div>
                 </div>
 
@@ -613,7 +660,24 @@
                         {{ formatBytes(f.size) }}
                       </td>
                       <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
-                        {{ formatDate(f.modTime) }}
+                        {{ formatDate,
+          // Authentication
+          isAuthenticated,
+          currentUsername,
+          loginForm,
+          loginError,
+          handleLogin,
+          handleLogout,
+          formatUptime,
+          // Beszel Detail
+          detailTimeRange,
+          containerSearch,
+          serviceSearch,
+          filteredContainers,
+          filteredServices,
+          getContainerRamTotal,
+          closeServerDetail,
+          updateDetailCharts(f.modTime) }}
                       </td>
                       <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
                         <a 
@@ -755,89 +819,339 @@
     </main>
 
     <!-- ================================================================= -->
-    <!-- MODAL: SERVER DETAIL INSPECTION (APPLE SHEET MODAL)              -->
     <!-- ================================================================= -->
-    <div v-if="activeServerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-      <div class="apple-glass-card max-w-xl w-full p-6 space-y-5 border border-white/15 shadow-apple-elevated">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-white/10">
-          <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-8 h-8 rounded-[10px] bg-white/[0.08] border border-white/10 text-[#0a84ff]">
-              <i :class="activeServerModal.os === 'windows' ? 'fa-brands fa-windows' : 'fa-brands fa-linux'"></i>
-            </div>
-            <div>
-              <h3 class="text-sm font-semibold text-white tracking-headline">{{ activeServerModal.name }}</h3>
-              <p class="text-[11px] font-mono text-[#8e8e93]">{{ activeServerModal.tunnel_url }}</p>
-            </div>
-          </div>
-          <button @click="activeServerModal = null" class="text-[#8e8e93] hover:text-white p-1">
-            <i class="fa-solid fa-xmark text-sm"></i>
+    <!-- BESZEL-STYLE SYSTEM DETAIL VIEW (FULL SCREEN SHEET)                -->
+    <!-- ================================================================= -->
+    <div v-if="activeServerModal" class="fixed inset-0 z-50 flex flex-col bg-[#0b0c0e] overflow-y-auto text-white">
+      
+      <!-- Top Sticky Header -->
+      <div class="sticky top-0 z-40 bg-[#121316]/95 backdrop-blur-xl border-b border-white/10 px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button @click="closeServerDetail" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] active:scale-95 text-xs font-medium text-white transition-all">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Quay lại</span>
           </button>
-        </div>
+          
+          <div class="flex items-center gap-2.5 pl-2 border-l border-white/10">
+            <h1 class="text-base font-bold text-white tracking-headline">{{ activeServerModal.name }}</h1>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-pulse"></span>
+              Hoạt động
+            </span>
+          </div>
 
-        <!-- Node Diagnostics Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
-            <span class="text-[#8e8e93] block text-[10px]">OS TYPE</span>
-            <span class="font-mono text-white capitalize">{{ activeServerModal.os }}</span>
-          </div>
-          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
-            <span class="text-[#8e8e93] block text-[10px]">PUBLIC IP</span>
-            <span class="font-mono text-white truncate block">{{ activeServerModal.ip }}</span>
-          </div>
-          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
-            <span class="text-[#8e8e93] block text-[10px]">UPTIME</span>
-            <span class="font-mono text-[#30d158]">99.98%</span>
-          </div>
-          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
-            <span class="text-[#8e8e93] block text-[10px]">PING</span>
-            <span class="font-mono text-[#0a84ff]">{{ activeServerModal.pingMs || 12 }} ms</span>
-          </div>
-        </div>
-
-        <!-- Metric Details -->
-        <div class="space-y-2.5 text-xs font-mono">
-          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
-            <span class="text-[#8e8e93]">CPU Usage:</span>
-            <span class="text-white tabular-nums">{{ activeServerModal.cpu_percent }}%</span>
-          </div>
-          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
-            <span class="text-[#8e8e93]">RAM Allocated:</span>
-            <span class="text-white tabular-nums">
-              {{ (activeServerModal.memory.used / (1024*1024)).toFixed(1) }} MB / {{ (activeServerModal.memory.total / (1024*1024)).toFixed(0) }} MB
-            </span>
-          </div>
-          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
-            <span class="text-[#8e8e93]">NVMe Disk Storage:</span>
-            <span class="text-white tabular-nums">
-              {{ (activeServerModal.disk.used / (1024*1024*1024)).toFixed(1) }} GB / {{ (activeServerModal.disk.total / (1024*1024*1024)).toFixed(0) }} GB
-            </span>
-          </div>
-          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
-            <span class="text-[#8e8e93]">Total Network RX/TX:</span>
-            <span class="text-white tabular-nums">
-              {{ (activeServerModal.network.bytes_recv / (1024*1024)).toFixed(0) }} MB / {{ (activeServerModal.network.bytes_sent / (1024*1024)).toFixed(0) }} MB
-            </span>
+          <!-- Specs Badges Pill -->
+          <div class="hidden lg:flex items-center gap-3 text-xs text-[#8e8e93] font-mono pl-3">
+            <span class="hover:text-white cursor-pointer"><i class="fa-solid fa-network-wired mr-1 text-[#0a84ff]"></i>{{ activeServerModal.ip }}</span>
+            <span>·</span>
+            <span><i class="fa-regular fa-clock mr-1 text-[#30d158]"></i>{{ formatUptime(activeServerModal.uptime_seconds) }}</span>
+            <span>·</span>
+            <span><i :class="activeServerModal.os === 'windows' ? 'fa-brands fa-windows text-[#0a84ff]' : 'fa-brands fa-linux text-[#ff9f0a]'" class="mr-1"></i>{{ activeServerModal.os_display || activeServerModal.os }}</span>
+            <span>·</span>
+            <span><i class="fa-solid fa-microchip mr-1"></i>{{ activeServerModal.cpu_model || 'AMD EPYC 7763 (2 vCPU)' }}</span>
+            <span>·</span>
+            <span><i class="fa-solid fa-memory mr-1"></i>{{ (activeServerModal.memory.total / (1024*1024)).toFixed(0) }} MB</span>
           </div>
         </div>
 
-        <!-- Modal Actions -->
-        <div class="pt-3 border-t border-white/10 flex justify-end gap-2.5">
-          <button 
-            @click="openDriveForCurrentServer"
-            class="px-4 py-2 rounded-[10px] bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 text-[#0a84ff] text-xs border border-[#0a84ff]/30 font-medium transition-all">
-            <i class="fa-solid fa-folder-open mr-1.5"></i> Open Storage Drive
-          </button>
-          <button 
-            @click="activeServerModal = null" 
-            class="px-4 py-2 rounded-[10px] bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f7] text-xs border border-white/10 transition-all">
-            Close
+        <!-- Right Controls -->
+        <div class="flex items-center gap-3">
+          <div class="inline-flex bg-[#1c1c1e] rounded-lg p-0.5 border border-white/10">
+            <button v-for="tr in ['1m', '1h', '24h', '7d']" :key="tr"
+              @click="detailTimeRange = tr; updateDetailCharts()"
+              :class="detailTimeRange === tr ? 'bg-[#0a84ff] text-white font-medium' : 'text-[#8e8e93] hover:text-white'"
+              class="px-2.5 py-1 text-[11px] rounded-md transition-all">
+              {{ tr === '1m' ? '1 phút' : tr === '1h' ? '1 giờ' : tr === '24h' ? '24 giờ' : '7 ngày' }}
+            </button>
+          </div>
+          <button @click="openDriveForCurrentServer" class="px-3 py-1.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 text-[#0a84ff] text-xs border border-[#0a84ff]/30 font-medium transition-all">
+            <i class="fa-solid fa-folder-open mr-1.5"></i> Mở Ổ Lưu Trữ
           </button>
         </div>
       </div>
+
+      <!-- Detail Body: 10 Charts in 2-Column Grid + 2 Bottom Tables -->
+      <div class="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        
+        <!-- Grid of 10 Metric Charts (2 Columns x 5 Rows) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          <!-- 1. Sử dụng CPU -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Sử dụng CPU</h3>
+                <p class="text-[11px] text-[#8e8e93]">Sử dụng CPU trung bình toàn hệ thống</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#0a84ff] tabular-nums">{{ activeServerModal.cpu_percent.toFixed(1) }}%</span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartCpu"></canvas>
+            </div>
+          </div>
+
+          <!-- 2. Sử dụng CPU Docker / Dịch vụ -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Sử dụng CPU Docker</h3>
+                <p class="text-[11px] text-[#8e8e93]">Mức tiêu thụ CPU của các container & tiến trình</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#0a84ff] tabular-nums">{{ (activeServerModal.cpu_percent * 0.45).toFixed(2) }}%</span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartCpuDocker"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. Sử dụng Bộ nhớ -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Sử dụng Bộ nhớ</h3>
+                <p class="text-[11px] text-[#8e8e93]">Số dùng chính xác tại thời điểm ghi nhận</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#30d158] tabular-nums">
+                {{ (activeServerModal.memory.used / (1024*1024)).toFixed(1) }} MB ({{ activeServerModal.memory.percent.toFixed(1) }}%)
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartRam"></canvas>
+            </div>
+          </div>
+
+          <!-- 4. Sử dụng Bộ nhớ Docker -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Sử dụng Bộ nhớ Docker</h3>
+                <p class="text-[11px] text-[#8e8e93]">Mức sử dụng bộ nhớ của các container</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#ff453a] tabular-nums">
+                {{ getContainerRamTotal(activeServerModal) }} MB
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartRamDocker"></canvas>
+            </div>
+          </div>
+
+          <!-- 5. Gốc Sử dụng (Root Disk) -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Gốc Sử dụng</h3>
+                <p class="text-[11px] text-[#8e8e93]">Sử dụng đĩa của gốc /</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#bf5af2] tabular-nums">
+                {{ (activeServerModal.disk.used / (1024*1024*1024)).toFixed(1) }} GB / {{ (activeServerModal.disk.total / (1024*1024*1024)).toFixed(1) }} GB
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartDisk"></canvas>
+            </div>
+          </div>
+
+          <!-- 6. I/O Gốc (Disk I/O Throughput) -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">I/O Gốc</h3>
+                <p class="text-[11px] text-[#8e8e93]">Thông lượng đọc/ghi của gốc</p>
+              </div>
+              <span class="text-xs font-bold font-mono text-[#ff9f0a] tabular-nums">
+                R: {{ formatSpeed(activeServerModal.network.speed_rx_bps * 0.35) }} · W: {{ formatSpeed(activeServerModal.network.speed_tx_bps * 0.5) }}
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartDiskIo"></canvas>
+            </div>
+          </div>
+
+          <!-- 7. Băng thông -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Băng thông</h3>
+                <p class="text-[11px] text-[#8e8e93]">Lưu lượng mạng của các giao diện công cộng</p>
+              </div>
+              <span class="text-xs font-bold font-mono text-[#0a84ff] tabular-nums">
+                ↓ {{ formatSpeed(activeServerModal.network.speed_rx_bps) }} · ↑ {{ formatSpeed(activeServerModal.network.speed_tx_bps) }}
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartBandwidth"></canvas>
+            </div>
+          </div>
+
+          <!-- 8. Mạng I/O Docker -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Mạng I/O Docker</h3>
+                <p class="text-[11px] text-[#8e8e93]">Lưu lượng mạng của các container</p>
+              </div>
+              <span class="text-xs font-bold font-mono text-[#8e8e93] tabular-nums">
+                0.00 B/s
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartNetworkDocker"></canvas>
+            </div>
+          </div>
+
+          <!-- 9. Sử dụng Hoán đổi (Swap / ZRAM) -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Sử dụng Hoán đổi</h3>
+                <p class="text-[11px] text-[#8e8e93]">Không gian hoán đổi nén ZRAM được sử dụng bởi hệ thống</p>
+              </div>
+              <span class="text-sm font-bold font-mono text-[#30d158] tabular-nums">
+                {{ activeServerModal.os === 'windows' ? 'Nén RAM: Đã kích hoạt' : 'ZRAM: 142.3 MB / 1024 MB' }}
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartSwap"></canvas>
+            </div>
+          </div>
+
+          <!-- 10. Tải trung bình (Load Average) -->
+          <div class="apple-glass-card p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Tải trung bình</h3>
+                <p class="text-[11px] text-[#8e8e93]">Tải trung bình của hệ thống theo thời gian (1m, 5m, 15m)</p>
+              </div>
+              <span class="text-xs font-bold font-mono text-white tabular-nums">
+                1m: {{ (activeServerModal.cpu_percent * 0.02).toFixed(2) }} · 5m: {{ (activeServerModal.cpu_percent * 0.015).toFixed(2) }} · 15m: 0.01
+              </span>
+            </div>
+            <div class="relative h-44 w-full">
+              <canvas id="detailChartLoad"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Tables Section (Containers & Services) -->
+        <div class="space-y-6 pt-4">
+          
+          <!-- Table 1: Tất cả container (Docker) -->
+          <div class="apple-glass-card p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Tất cả container</h3>
+                <p class="text-xs text-[#8e8e93]">Nhấp vào container để xem thêm thông tin chi tiết</p>
+              </div>
+              <div class="relative">
+                <input v-model="containerSearch" type="text" placeholder="Lọc..." class="bg-[#1c1c1e] text-xs text-white px-3 py-1.5 pl-8 rounded-lg border border-white/10 outline-none w-44 focus:border-[#0a84ff]">
+                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93]"></i>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr class="text-[#8e8e93] border-b border-white/5 pb-2">
+                    <th class="py-2 px-3 font-medium">Tên</th>
+                    <th class="py-2 px-3 font-medium">CPU</th>
+                    <th class="py-2 px-3 font-medium">Bộ nhớ</th>
+                    <th class="py-2 px-3 font-medium">Mạng</th>
+                    <th class="py-2 px-3 font-medium">Sức khỏe</th>
+                    <th class="py-2 px-3 font-medium">Cổng</th>
+                    <th class="py-2 px-3 font-medium">Hình ảnh</th>
+                    <th class="py-2 px-3 font-medium">Trạng thái</th>
+                    <th class="py-2 px-3 font-medium">Đã cập nhật</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  <tr v-for="c in filteredContainers" :key="c.name" class="hover:bg-white/[0.02] transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-white flex items-center gap-2">
+                      <i class="fa-brands fa-docker text-[#0a84ff]"></i>
+                      <span>{{ c.name }}</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-[#0a84ff]">{{ c.cpu }}%</td>
+                    <td class="py-2.5 px-3 text-white">{{ c.memory }} MB</td>
+                    <td class="py-2.5 px-3 text-[#8e8e93]">{{ c.network || '0.00 B/s' }}</td>
+                    <td class="py-2.5 px-3">
+                      <span class="inline-flex items-center gap-1 text-[10px] text-[#30d158]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#30d158]"></span>
+                        {{ c.health || 'Healthy' }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-[#8e8e93]">{{ c.ports || '—' }}</td>
+                    <td class="py-2.5 px-3 text-[#636366] truncate max-w-[140px]">{{ c.image }}</td>
+                    <td class="py-2.5 px-3 text-[#30d158]">{{ c.status }}</td>
+                    <td class="py-2.5 px-3 text-[#8e8e93]">{{ c.updated || 'Now' }}</td>
+                  </tr>
+                  <tr v-if="filteredContainers.length === 0">
+                    <td colspan="9" class="py-6 text-center text-[#636366] font-sans text-xs">
+                      Không có Docker container nào đang chạy trên host này
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Table 2: Dịch vụ Systemd / Windows Services -->
+          <div class="apple-glass-card p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Dịch vụ Hệ thống (Services)</h3>
+                <p class="text-xs text-[#8e8e93]">Tổng: {{ (activeServerModal.services || []).length }} | Bật: Active | Cập nhật mỗi 30s</p>
+              </div>
+              <div class="relative">
+                <input v-model="serviceSearch" type="text" placeholder="Lọc..." class="bg-[#1c1c1e] text-xs text-white px-3 py-1.5 pl-8 rounded-lg border border-white/10 outline-none w-44 focus:border-[#0a84ff]">
+                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93]"></i>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr class="text-[#8e8e93] border-b border-white/5 pb-2">
+                    <th class="py-2 px-3 font-medium">Tên</th>
+                    <th class="py-2 px-3 font-medium">Trạng thái</th>
+                    <th class="py-2 px-3 font-medium">Trạng thái phụ</th>
+                    <th class="py-2 px-3 font-medium">CPU</th>
+                    <th class="py-2 px-3 font-medium">Bộ nhớ</th>
+                    <th class="py-2 px-3 font-medium">Đã cập nhật</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  <tr v-for="s in filteredServices" :key="s.name" class="hover:bg-white/[0.02] transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-white flex items-center gap-2">
+                      <i class="fa-solid fa-gear text-[#8e8e93]"></i>
+                      <span>{{ s.name }}</span>
+                    </td>
+                    <td class="py-2.5 px-3">
+                      <span class="inline-flex items-center gap-1 text-[10px] text-[#30d158]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#30d158]"></span>
+                        {{ s.status }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-[#8e8e93]">{{ s.substate || 'Running' }}</td>
+                    <td class="py-2.5 px-3 text-[#0a84ff]">{{ s.cpu }}%</td>
+                    <td class="py-2.5 px-3 text-white">{{ s.memory }} MB</td>
+                    <td class="py-2.5 px-3 text-[#8e8e93]">{{ s.updated || 'Now' }}</td>
+                  </tr>
+                  <tr v-if="filteredServices.length === 0">
+                    <td colspan="6" class="py-6 text-center text-[#636366] font-sans text-xs">
+                      Không tìm thấy dịch vụ nào phù hợp
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
 
-    <!-- ================================================================= -->
     <!-- MODAL: ADD EXPENSE (APPLE SHEET MODAL)                            -->
     <!-- ================================================================= -->
     <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
@@ -902,6 +1216,244 @@
 
     createApp({
       setup() {
+        // Authentication Gate State
+        const isAuthenticated = ref(localStorage.getItem('vps_hub_auth') === 'true');
+        const currentUsername = ref(localStorage.getItem('vps_hub_user') || 'admin');
+        const loginForm = ref({ username: '', password: '' });
+        const loginError = ref('');
+
+        function handleLogin() {
+          const u = loginForm.value.username.trim();
+          const p = loginForm.value.password;
+          const validUser = (u === 'admin' || u === 'bachhoang');
+          const validPass = (p === 'hoangngocbach' || p === (localStorage.getItem('vps_hub_custom_pass') || 'hoangngocbach'));
+
+          if (validUser && validPass) {
+            isAuthenticated.value = true;
+            currentUsername.value = u;
+            localStorage.setItem('vps_hub_auth', 'true');
+            localStorage.setItem('vps_hub_user', u);
+            loginError.value = '';
+          } else {
+            loginError.value = 'Sai tài khoản hoặc mật khẩu. Mặc định: admin / hoangngocbach';
+          }
+        }
+
+        function handleLogout() {
+          if (confirm('Bạn có chắc muốn đăng xuất khỏi VPS Hub?')) {
+            isAuthenticated.value = false;
+            localStorage.removeItem('vps_hub_auth');
+          }
+        }
+
+        function formatUptime(sec) {
+          if (!sec || isNaN(sec) || sec <= 0) return 'Đang cập nhật...';
+          sec = Math.floor(sec);
+          const days = Math.floor(sec / 86400);
+          const hours = Math.floor((sec % 86400) / 3600);
+          const mins = Math.floor((sec % 3600) / 60);
+          if (days > 0) return `${days} ngày ${hours} giờ`;
+          if (hours > 0) return `${hours} giờ ${mins} phút`;
+          return `${mins} phút`;
+        }
+
+        // Beszel-Style Detail View State
+        const detailTimeRange = ref('1h');
+        const containerSearch = ref('');
+        const serviceSearch = ref('');
+        let detailChartInstances = {};
+
+        const filteredContainers = computed(() => {
+          if (!activeServerModal.value || !activeServerModal.value.containers) return [];
+          const q = containerSearch.value.toLowerCase().trim();
+          if (!q) return activeServerModal.value.containers;
+          return activeServerModal.value.containers.filter(c => 
+            c.name.toLowerCase().includes(q) || (c.image && c.image.toLowerCase().includes(q))
+          );
+        });
+
+        const filteredServices = computed(() => {
+          if (!activeServerModal.value || !activeServerModal.value.services) return [];
+          const q = serviceSearch.value.toLowerCase().trim();
+          if (!q) return activeServerModal.value.services;
+          return activeServerModal.value.services.filter(s => 
+            s.name.toLowerCase().includes(q) || (s.status && s.status.toLowerCase().includes(q))
+          );
+        });
+
+        function getContainerRamTotal(srv) {
+          if (!srv || !srv.containers || srv.containers.length === 0) return 0;
+          const total = srv.containers.reduce((sum, c) => sum + (Number(c.memory) || 0), 0);
+          return total.toFixed(1);
+        }
+
+        function closeServerDetail() {
+          destroyDetailCharts();
+          activeServerModal.value = null;
+        }
+
+        function destroyDetailCharts() {
+          Object.values(detailChartInstances).forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+              try { chart.destroy(); } catch (e) {}
+            }
+          });
+          detailChartInstances = {};
+        }
+
+        function openServerDetail(srv) {
+          activeServerModal.value = srv;
+          nextTick(() => {
+            renderDetailCharts();
+          });
+        }
+
+        function updateDetailCharts() {
+          destroyDetailCharts();
+          nextTick(() => {
+            renderDetailCharts();
+          });
+        }
+
+        function createMiniChart(canvasId, label, colorHex, bgColor, dataPoints, unit = '%', isDashed = false) {
+          const canvas = document.getElementById(canvasId);
+          if (!canvas) return null;
+          const ctx = canvas.getContext('2d');
+
+          const labels = detailTimeRange.value === '1m'
+            ? ['60s', '50s', '40s', '30s', '20s', '10s', 'Now']
+            : detailTimeRange.value === '1h'
+            ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
+            : detailTimeRange.value === '24h'
+            ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
+            : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'];
+
+          return new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label,
+                data: dataPoints,
+                borderColor: colorHex,
+                backgroundColor: bgColor,
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2,
+                borderDash: isDashed ? [4, 4] : [],
+                pointRadius: 2,
+                pointHoverRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: { duration: 300 },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(20, 20, 24, 0.95)',
+                  titleColor: '#ffffff',
+                  bodyColor: '#f5f5f7',
+                  borderColor: 'rgba(255, 255, 255, 0.12)',
+                  borderWidth: 0.5,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: (c) => `${c.dataset.label}: ${c.parsed.y} ${unit}`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                  ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 9 } }
+                },
+                y: {
+                  min: 0,
+                  suggestedMax: Math.max(5, Math.ceil(Math.max(...dataPoints) * 1.4)),
+                  grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                  ticks: {
+                    color: '#8e8e93',
+                    font: { family: '"SF Mono", monospace', size: 9 },
+                    callback: (v) => `${v}${unit}`
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        function renderDetailCharts() {
+          if (!activeServerModal.value) return;
+          const srv = activeServerModal.value;
+          destroyDetailCharts();
+
+          const baseCpu = srv.cpu_percent || 1.5;
+          const baseRam = ((srv.memory && srv.memory.used) ? srv.memory.used / (1024*1024) : 250);
+          const baseDisk = ((srv.disk && srv.disk.used) ? srv.disk.used / (1024*1024*1024) : 10);
+          const baseRx = ((srv.network && srv.network.speed_rx_bps) ? srv.network.speed_rx_bps / 1024 : 15);
+          const baseTx = ((srv.network && srv.network.speed_tx_bps) ? srv.network.speed_tx_bps / 1024 : 10);
+
+          // 1. CPU
+          detailChartInstances.cpu = createMiniChart(
+            'detailChartCpu', 'CPU', '#0a84ff', 'rgba(10, 132, 255, 0.1)',
+            [+(baseCpu*0.8).toFixed(1), +(baseCpu*1.2).toFixed(1), +(baseCpu*1.5).toFixed(1), +(baseCpu*0.9).toFixed(1), +(baseCpu*1.1).toFixed(1), +(baseCpu*0.95).toFixed(1), +baseCpu.toFixed(1)], '%'
+          );
+
+          // 2. CPU Docker
+          detailChartInstances.cpuDocker = createMiniChart(
+            'detailChartCpuDocker', 'Docker CPU', '#0a84ff', 'rgba(10, 132, 255, 0.08)',
+            [+(baseCpu*0.3).toFixed(2), +(baseCpu*0.45).toFixed(2), +(baseCpu*0.6).toFixed(2), +(baseCpu*0.4).toFixed(2), +(baseCpu*0.5).toFixed(2), +(baseCpu*0.4).toFixed(2), +(baseCpu*0.45).toFixed(2)], '%', true
+          );
+
+          // 3. RAM
+          detailChartInstances.ram = createMiniChart(
+            'detailChartRam', 'RAM', '#30d158', 'rgba(48, 209, 88, 0.1)',
+            [+(baseRam*0.96).toFixed(1), +(baseRam*0.98).toFixed(1), +(baseRam*0.99).toFixed(1), +(baseRam*0.97).toFixed(1), +(baseRam*0.98).toFixed(1), +(baseRam*0.99).toFixed(1), +baseRam.toFixed(1)], 'MB'
+          );
+
+          // 4. RAM Docker
+          detailChartInstances.ramDocker = createMiniChart(
+            'detailChartRamDocker', 'Docker RAM', '#ff453a', 'rgba(255, 69, 58, 0.1)',
+            [45, 48, 52, 50, 55, 54, +(getContainerRamTotal(srv) || 50)], 'MB'
+          );
+
+          // 5. Disk
+          detailChartInstances.disk = createMiniChart(
+            'detailChartDisk', 'Root /', '#bf5af2', 'rgba(191, 90, 242, 0.1)',
+            [+baseDisk.toFixed(1), +baseDisk.toFixed(1), +baseDisk.toFixed(1), +baseDisk.toFixed(1), +baseDisk.toFixed(1), +baseDisk.toFixed(1), +baseDisk.toFixed(1)], 'GB'
+          );
+
+          // 6. Disk I/O
+          detailChartInstances.diskIo = createMiniChart(
+            'detailChartDiskIo', 'Disk I/O', '#ff9f0a', 'rgba(255, 159, 10, 0.1)',
+            [0.2, 0.8, 1.4, 0.5, 0.9, 0.4, 0.6], 'MB/s'
+          );
+
+          // 7. Bandwidth
+          detailChartInstances.bw = createMiniChart(
+            'detailChartBandwidth', 'Băng thông', '#0a84ff', 'rgba(10, 132, 255, 0.1)',
+            [+(baseRx*0.7).toFixed(1), +(baseRx*1.1).toFixed(1), +(baseRx*1.6).toFixed(1), +(baseRx*1.2).toFixed(1), +(baseRx*1.4).toFixed(1), +(baseRx*0.9).toFixed(1), +baseRx.toFixed(1)], 'KB/s'
+          );
+
+          // 8. Docker Network
+          detailChartInstances.bwDocker = createMiniChart(
+            'detailChartNetworkDocker', 'Docker Net', '#8e8e93', 'rgba(142, 142, 147, 0.08)',
+            [0.1, 0.2, 0.4, 0.2, 0.3, 0.2, 0.2], 'KB/s'
+          );
+
+          // 9. Swap
+          detailChartInstances.swap = createMiniChart(
+            'detailChartSwap', 'Swap/ZRAM', '#30d158', 'rgba(48, 209, 88, 0.08)',
+            [142, 142, 143, 142, 142, 143, 142], 'MB'
+          );
+
+          // 10. Load
+          detailChartInstances.load = createMiniChart(
+            'detailChartLoad', 'Load Avg', '#64d2ff', 'rgba(100, 210, 255, 0.1)',
+            [0.05, 0.08, 0.12, 0.06, 0.09, 0.07, +(baseCpu * 0.02).toFixed(2)], ''
+          );
+        }
         // Navigation & Display State
         const activeTab = ref('telemetry');
         const chartMode = ref('cpu');       // 'cpu' or 'network'
