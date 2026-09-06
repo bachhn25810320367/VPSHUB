@@ -16,6 +16,7 @@ api/dist/
 # Go binaries & storage data
 agent/vps-agent-windows.exe
 agent/vps-agent-linux
+vps-agent-linux
 *.exe
 data/
 agent/data/

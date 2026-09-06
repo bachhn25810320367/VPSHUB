@@ -2008,7 +2008,6 @@
         const activeTab = ref('telemetry');
         const chartMode = ref('cpu');       // 'cpu' or 'network'
         const timeRange = ref('Live');
-        const agentSecret = ref(localStorage.getItem('vps_agent_secret') || 'hoangngocbach-secret-2026');
         const liveHistory = ref({
           labels: ['-33s', '-30s', '-27s', '-24s', '-21s', '-18s', '-15s', '-12s', '-9s', '-6s', '-3s', 'Now'],
           vps1: [2.0, 2.1, 1.9, 2.2, 2.0, 2.3, 2.1, 2.0, 2.2, 2.1, 2.0, 2.0],
