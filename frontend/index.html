@@ -608,6 +608,11 @@
                       <i class="fa-regular fa-clock text-[#30d158]"></i>
                       <span class="text-white font-medium">{{ formatUptime(srv.uptime_seconds) }}</span>
                     </p>
+                    <p v-if="srv.last_seen_seconds_ago != null" class="text-[10px] mt-1 flex items-center gap-1.5 font-mono" :class="(srv.last_seen_seconds_ago > 90) ? 'text-[#ff9f0a]' : 'text-[#8e8e93]'">
+                      <i class="fa-solid fa-satellite-dish" :class="(srv.last_seen_seconds_ago > 90) ? 'text-[#ff9f0a]' : 'text-[#30d158]'"></i>
+                      <span>Seen {{ formatLastSeen(srv.last_seen_seconds_ago) }}</span>
+                      <span v-if="srv.last_seen_seconds_ago > 90" class="px-1.5 py-px rounded-full text-[9px] font-semibold bg-[#ff9f0a]/15 border border-[#ff9f0a]/30 text-[#ff9f0a]">STALE</span>
+                    </p>
                   </div>
                 </div>
 
@@ -1796,6 +1801,16 @@
           }
         }
 
+        function formatLastSeen(sec) {
+          if (sec == null || isNaN(sec) || sec < 0) return 'unknown';
+          sec = Math.floor(sec);
+          if (sec < 5) return 'just now';
+          if (sec < 60) return sec + 's ago';
+          const mins = Math.floor(sec / 60);
+          if (mins < 60) return mins + 'm ' + (sec % 60) + 's ago';
+          const hrs = Math.floor(mins / 60);
+          return hrs + 'h ' + (mins % 60) + 'm ago';
+        }
         function formatUptime(sec) {
           if (!sec || isNaN(sec) || sec <= 0) return 'Syncing...';
           sec = Math.floor(sec);
