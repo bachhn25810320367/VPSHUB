@@ -234,7 +234,7 @@ export async function onRequest(context) {
       const password = body.password || "";
 
       if (!username || !password) {
-        return jsonResponse({ error: "Vui lòng nhập tài khoản và mật khẩu" }, 400);
+        return jsonResponse({ error: "Please enter username and password" }, 400);
       }
 
       const users = await cosmosQuery(
@@ -251,7 +251,7 @@ export async function onRequest(context) {
       );
 
       if (!user) {
-        return jsonResponse({ error: "Tài khoản không tồn tại trên hệ thống" }, 401);
+        return jsonResponse({ error: "User account not found" }, 401);
       }
 
       // Hash with user's salt using Web Crypto SHA-256
@@ -263,7 +263,7 @@ export async function onRequest(context) {
         .join("");
 
       if (computedHash !== user.password_hash) {
-        return jsonResponse({ error: "Mật khẩu không chính xác" }, 401);
+        return jsonResponse({ error: "Invalid password" }, 401);
       }
 
       const token = `vpshub_token_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -274,7 +274,7 @@ export async function onRequest(context) {
         role: user.role || "owner"
       });
     } catch (e) {
-      return jsonResponse({ error: "Lỗi xử lý đăng nhập: " + e.message }, 500);
+      return jsonResponse({ error: "Login processing error: " + e.message }, 500);
     }
   }
 
@@ -286,11 +286,11 @@ export async function onRequest(context) {
       const newPassword = body.newPassword || "";
 
       if (!username || !oldPassword || !newPassword) {
-        return jsonResponse({ error: "Vui lòng nhập đầy đủ thông tin" }, 400);
+        return jsonResponse({ error: "Please fill in all required fields" }, 400);
       }
 
       if (newPassword.length < 6) {
-        return jsonResponse({ error: "Mật khẩu mới phải có ít nhất 6 ký tự" }, 400);
+        return jsonResponse({ error: "New password must be at least 6 characters" }, 400);
       }
 
       const users = await cosmosQuery(
@@ -307,7 +307,7 @@ export async function onRequest(context) {
       );
 
       if (!user) {
-        return jsonResponse({ error: "Không tìm thấy người dùng" }, 404);
+        return jsonResponse({ error: "User not found" }, 404);
       }
 
       const enc = new TextEncoder();
@@ -315,7 +315,7 @@ export async function onRequest(context) {
       const oldHash = Array.from(new Uint8Array(oldHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
 
       if (oldHash !== user.password_hash) {
-        return jsonResponse({ error: "Mật khẩu hiện tại không đúng" }, 401);
+        return jsonResponse({ error: "Current password is incorrect" }, 401);
       }
 
       const newSalt = `salt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -327,9 +327,9 @@ export async function onRequest(context) {
       user.updated_at = new Date().toISOString();
 
       await cosmosUpsertItem(env, "expenses", user, "auth_user");
-      return jsonResponse({ success: true, message: "Mật khẩu đã được cập nhật thành công trên Azure Cosmos DB!" });
+      return jsonResponse({ success: true, message: "Password updated successfully in Azure Cosmos DB!" });
     } catch (e) {
-      return jsonResponse({ error: "Lỗi đổi mật khẩu: " + e.message }, 500);
+      return jsonResponse({ error: "Password change error: " + e.message }, 500);
     }
   }
 
