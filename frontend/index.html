@@ -1036,7 +1036,6 @@
 
         // Telemetry Data Ingestion
         async function fetchMetrics() {
-          isRefreshing.value = true;
           try {
             const res = await fetch('/api/telemetry/latest');
             if (res.ok) {
@@ -1077,7 +1076,6 @@
               liveHistory.value.tx.push(txVal);
               if (liveHistory.value.tx.length > 12) liveHistory.value.tx.shift();
             }
-            isRefreshing.value = false;
             renderCharts();
           }
         }
@@ -1086,10 +1084,15 @@
           fetchMetrics();
         }
 
-        function refreshData() {
-          fetchMetrics();
-          if (activeTab.value === 'storage') loadFilesForSelectedServer();
-          if (activeTab.value === 'expenses') fetchExpenses();
+        async function refreshData() {
+          isRefreshing.value = true;
+          try {
+            await fetchMetrics();
+            if (activeTab.value === 'storage') await loadFilesForSelectedServer();
+            if (activeTab.value === 'expenses') await fetchExpenses();
+          } finally {
+            isRefreshing.value = false;
+          }
         }
 
         // Master Chart Rendering (Apple Health / Activity / Instruments Graph Style)
@@ -1203,7 +1206,17 @@
               }
             ];
 
-            if (masterChartInstance) masterChartInstance.destroy();
+            if (masterChartInstance) {
+              masterChartInstance.data.labels = timeLabels;
+              masterChartInstance.data.datasets = datasets;
+              if (masterChartInstance.options && masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
+                masterChartInstance.options.scales.y.suggestedMax = chartMode.value === 'cpu' 
+                  ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(Math.max(...vps1Data, ...vps2Data, ...vps3Data) * 1.5)) : 100)
+                  : Math.max(5, Math.ceil(Math.max(...rxData, ...txData) * 1.4));
+              }
+              masterChartInstance.update(timeRange.value === 'Live' ? 'none' : undefined);
+              return;
+            }
 
             masterChartInstance = new Chart(ctx, {
               type: 'line',
