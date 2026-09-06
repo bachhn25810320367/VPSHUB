@@ -679,6 +679,51 @@ export async function onRequest(context) {
     }
   }
 
+  // 6c. GET /api/files/list (Private proxy to agent)
+  if (path === "/api/files/list" && method === "GET") {
+    const vpsId = url.searchParams.get("vps_id") || "";
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/list`, { headers: { "X-Agent-Secret": secret } });
+      const h = new Headers(); h.set("Access-Control-Allow-Origin", "*"); h.set("Content-Type", "application/json; charset=utf-8");
+      return new Response(await r.text(), { status: r.status, headers: h });
+    } catch (e) { return new Response("Proxy list failed: " + e.message, { status: 502 }); }
+  }
+
+  // 6d. POST /api/files/upload-chunk (Private proxy to agent, streams body)
+  if (path === "/api/files/upload-chunk" && method === "POST") {
+    const vpsId = url.searchParams.get("vps_id") || "";
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    const fwd = new Headers();
+    for (const k of ["Upload-Id", "Chunk-Index", "Total-Chunks", "File-Name"]) {
+      const v = request.headers.get(k) || request.headers.get(k.toLowerCase());
+      if (v) fwd.set(k, v);
+    }
+    fwd.set("X-Agent-Secret", secret);
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/upload-chunk`, { method: "POST", headers: fwd, body: request.body });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return new Response("Proxy upload failed: " + e.message, { status: 502 }); }
+  }
+
+  // 6e. DELETE /api/files/delete (Private proxy to agent)
+  if (path === "/api/files/delete" && method === "DELETE") {
+    const vpsId = url.searchParams.get("vps_id") || "";
+    const fileName = url.searchParams.get("name") || "";
+    if (!fileName) return new Response("Missing file name", { status: 400 });
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return new Response("Proxy delete failed: " + e.message, { status: 502 }); }
+  }
+
   // 7. GET /api/servers
   if (path === "/api/servers" && method === "GET") {
     return jsonResponse(DEFAULT_SERVERS);

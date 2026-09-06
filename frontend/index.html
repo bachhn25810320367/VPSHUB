@@ -2384,11 +2384,10 @@
 
         async function loadFilesForSelectedServer() {
           const srv = currentStorageServer.value;
-          if (!srv || !srv.tunnel_url) return;
+          if (!srv) return;
+          const vid = srv.id || srv.vps_id || '';
           try {
-            const res = await fetch(`${srv.tunnel_url}/api/files/list`, {
-              headers: { 'X-Agent-Secret': agentSecret.value }
-            });
+            const res = await fetch(`/api/files/list?vps_id=${encodeURIComponent(vid)}`);
             if (res.ok) {
               const data = await res.json();
               if (data.files) files.value = data.files;
@@ -2414,6 +2413,7 @@
             message: 'Dividing into 20MB stream chunks...'
           };
 
+          const upVid = (currentStorageServer.value && (currentStorageServer.value.id || currentStorageServer.value.vps_id)) || '';
           for (let i = 0; i < totalChunks; i++) {
             const start = i * CHUNK_SIZE;
             const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -2423,17 +2423,17 @@
             uploadStatus.value.message = `Uploading chunk ${i + 1}/${totalChunks}...`;
 
             try {
-              const res = await fetch(`${srv.tunnel_url}/api/files/upload-chunk`, {
+              const res = await fetch(`/api/files/upload-chunk?vps_id=${encodeURIComponent(upVid)}`, {
                 method: 'POST',
                 headers: {
                   'Upload-Id': uploadId,
                   'Chunk-Index': i.toString(),
                   'Total-Chunks': totalChunks.toString(),
-                  'File-Name': encodeURIComponent(file.name),
-                  'X-Agent-Secret': agentSecret.value
+                  'File-Name': encodeURIComponent(file.name)
                 },
                 body: chunk
               });
+              if (!res.ok) throw new Error('chunk ' + (i+1) + ' -> HTTP ' + res.status);
               uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
             } catch (err) {
               uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
@@ -2476,10 +2476,10 @@
           if (!confirm(`Are you sure you want to delete ${fileName} from ${currentStorageServer.value.name}?`)) return;
           files.value = files.value.filter(f => f.name !== fileName);
           const srv = currentStorageServer.value;
+          const delVid = (srv && (srv.id || srv.vps_id)) || '';
           try {
-            await fetch(`${srv.tunnel_url}/api/files/delete?name=${encodeURIComponent(fileName)}`, {
-              method: 'DELETE',
-              headers: { 'X-Agent-Secret': agentSecret.value }
+            await fetch(`/api/files/delete?vps_id=${encodeURIComponent(delVid)}&name=${encodeURIComponent(fileName)}`, {
+              method: 'DELETE'
             });
           } catch (e) {}
         }
