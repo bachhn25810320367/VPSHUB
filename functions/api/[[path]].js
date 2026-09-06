@@ -605,7 +605,7 @@ export async function onRequest(context) {
   // 6. /api/files/share/raw (Public Stream & Download Proxy)
   if (path === "/api/files/share/raw") {
     const shareId = url.searchParams.get("id");
-    if (!shareId) return new Response("Missing share id", { status: 400 });
+    if (!shareId) return jsonResponse({ error: "Missing share id" }, 400);
 
     const docs = await cosmosQuery(
       env,
@@ -615,7 +615,7 @@ export async function onRequest(context) {
       "file_share"
     );
     if (!docs || docs.length === 0) {
-      return new Response("Share link not found or expired", { status: 404 });
+      return jsonResponse({ error: "Share link not found or expired" }, 404);
     }
 
     const share = docs[0];
@@ -646,7 +646,7 @@ export async function onRequest(context) {
         headers: responseHeaders
       });
     } catch (err) {
-      return new Response("Error streaming file: " + err.message, { status: 502 });
+      return jsonResponse({ error: "Error streaming file: " + err.message }, 502);
     }
   }
 
@@ -654,11 +654,11 @@ export async function onRequest(context) {
   if (path === "/api/files/download" && method === "GET") {
     const vpsId = url.searchParams.get("vps_id") || url.searchParams.get("vpsId") || url.searchParams.get("id") || "";
     const fileName = url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
-    if (!fileName) return new Response("Missing file name", { status: 400 });
+    if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
     let srv = null;
     if (vpsId) srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase());
     // fallback: if vps_id missing, try to infer from file share? else pick vps1 only if single
-    if (!srv && vpsId) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    if (!srv && vpsId) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
     if (!srv) srv = DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const agentUrl = `${srv.tunnelUrl}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(secret)}`;
@@ -675,7 +675,7 @@ export async function onRequest(context) {
       else if (!h.get("Content-Disposition")) h.set("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
       return new Response(r.body, { status: r.status, headers: h });
     } catch (e) {
-      return new Response("Proxy to agent failed: " + e.message + " (" + agentUrl.replace(secret, "***") + ")", { status: 502 });
+      return jsonResponse({ error: "Proxy to agent failed: " + e.message, tunnel: agentUrl.replace(secret, "***") }, 502);
     }
   }
 
@@ -683,20 +683,20 @@ export async function onRequest(context) {
   if (path === "/api/files/list" && method === "GET") {
     const vpsId = url.searchParams.get("vps_id") || "";
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/list`, { headers: { "X-Agent-Secret": secret } });
       const h = new Headers(); h.set("Access-Control-Allow-Origin", "*"); h.set("Content-Type", "application/json; charset=utf-8");
       return new Response(await r.text(), { status: r.status, headers: h });
-    } catch (e) { return new Response("Proxy list failed: " + e.message, { status: 502 }); }
+    } catch (e) { return jsonResponse({ error: "Proxy list failed: " + e.message }, 502); }
   }
 
   // 6d. POST /api/files/upload-chunk (Private proxy to agent, streams body)
   if (path === "/api/files/upload-chunk" && method === "POST") {
     const vpsId = url.searchParams.get("vps_id") || "";
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const fwd = new Headers();
     for (const k of ["Upload-Id", "Chunk-Index", "Total-Chunks", "File-Name"]) {
@@ -707,21 +707,21 @@ export async function onRequest(context) {
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/upload-chunk`, { method: "POST", headers: fwd, body: request.body });
       return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
-    } catch (e) { return new Response("Proxy upload failed: " + e.message, { status: 502 }); }
+    } catch (e) { return jsonResponse({ error: "Proxy upload failed: " + e.message }, 502); }
   }
 
   // 6e. DELETE /api/files/delete (Private proxy to agent)
   if (path === "/api/files/delete" && method === "DELETE") {
     const vpsId = url.searchParams.get("vps_id") || "";
     const fileName = url.searchParams.get("name") || "";
-    if (!fileName) return new Response("Missing file name", { status: 400 });
+    if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
       return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
-    } catch (e) { return new Response("Proxy delete failed: " + e.message, { status: 502 }); }
+    } catch (e) { return jsonResponse({ error: "Proxy delete failed: " + e.message }, 502); }
   }
 
   // 7. GET /api/servers
