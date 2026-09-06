@@ -465,8 +465,14 @@
             <div>
               <div class="flex items-start justify-between gap-2 pb-3 border-b border-white/[0.06]">
                 <div class="flex items-center gap-3">
-                  <div class="flex items-center justify-center w-9 h-9 rounded-[10px] bg-white/[0.06] border border-white/10 text-white group-hover:border-[#0a84ff]/50 group-hover:text-[#0a84ff] transition-all">
-                    <i :class="srv.os === 'windows' ? 'fa-brands fa-windows text-sm' : 'fa-brands fa-linux text-base'"></i>
+                  <div class="flex items-center justify-center w-9 h-9 rounded-[10px] bg-white/[0.06] border border-white/10 text-white group-hover:border-[#0a84ff]/50 transition-all">
+                    <!-- Windows -->
+                    <i v-if="srv.id === 'vps1' || srv.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] text-base"></i>
+                    <!-- Ubuntu -->
+                    <i v-else-if="srv.id === 'vps2' || (srv.name && srv.name.toLowerCase().includes('ubuntu'))" class="fa-brands fa-ubuntu text-[#e95420] text-lg"></i>
+                    <!-- Debian (Real Debian Swirl Icon) -->
+                    <i v-else-if="srv.id === 'vps3' || (srv.name && srv.name.toLowerCase().includes('debian'))" class="fa-brands fa-debian text-[#d70a53] text-xl"></i>
+                    <i v-else class="fa-brands fa-linux text-[#ff9f0a] text-base"></i>
                   </div>
                   <div>
                     <h3 class="text-sm font-semibold text-white tracking-headline group-hover:text-[#0a84ff] transition-colors">
@@ -836,7 +842,13 @@
             <span>·</span>
             <span><i class="fa-regular fa-clock mr-1 text-[#30d158]"></i>{{ formatUptime(activeServerModal.uptime_seconds) }}</span>
             <span>·</span>
-            <span><i :class="activeServerModal.os === 'windows' ? 'fa-brands fa-windows text-[#0a84ff]' : 'fa-brands fa-linux text-[#ff9f0a]'" class="mr-1"></i>{{ activeServerModal.os_display || activeServerModal.os }}</span>
+            <span>
+              <i v-if="activeServerModal.id === 'vps1' || activeServerModal.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] mr-1.5"></i>
+              <i v-else-if="activeServerModal.id === 'vps2' || (activeServerModal.name && activeServerModal.name.toLowerCase().includes('ubuntu'))" class="fa-brands fa-ubuntu text-[#e95420] mr-1.5"></i>
+              <i v-else-if="activeServerModal.id === 'vps3' || (activeServerModal.name && activeServerModal.name.toLowerCase().includes('debian'))" class="fa-brands fa-debian text-[#d70a53] mr-1.5"></i>
+              <i v-else class="fa-brands fa-linux text-[#ff9f0a] mr-1.5"></i>
+              {{ activeServerModal.os_display || activeServerModal.os }}
+            </span>
             <span>·</span>
             <span><i class="fa-solid fa-microchip mr-1"></i>{{ activeServerModal.cpu_model || 'AMD EPYC 7763 (2 vCPU)' }}</span>
             <span>·</span>
@@ -1343,9 +1355,10 @@
           const days = Math.floor(sec / 86400);
           const hours = Math.floor((sec % 86400) / 3600);
           const mins = Math.floor((sec % 3600) / 60);
-          if (days > 0) return `${days}d ${hours}h`;
-          if (hours > 0) return `${hours}h ${mins}m`;
-          return `${mins}m`;
+          const s = Math.floor(sec % 60);
+          if (days > 0) return `${days}d ${hours}h ${mins}m ${s}s`;
+          if (hours > 0) return `${hours}h ${mins}m ${s}s`;
+          return `${mins}m ${s}s`;
         }
 
         // Beszel-Style Detail View State
@@ -2181,12 +2194,26 @@
           return new Date(dateStr).toLocaleDateString('en-US');
         }
 
+        let uptimeTicker = null;
+
         onMounted(() => {
           fetchMetrics();
           fetchChartHistory();
           fetchExpenses();
           loadFilesForSelectedServer();
           updatePollingSchedule();
+
+          // Live Realtime 1-Second Uptime Ticker
+          uptimeTicker = setInterval(() => {
+            servers.value.forEach(srv => {
+              if (srv.is_online) {
+                srv.uptime_seconds = (srv.uptime_seconds || 0) + 1;
+              }
+            });
+            if (activeServerModal.value && activeServerModal.value.is_online) {
+              activeServerModal.value.uptime_seconds = (activeServerModal.value.uptime_seconds || 0) + 1;
+            }
+          }, 1000);
 
           window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -2198,7 +2225,8 @@
 
         onUnmounted(() => {
           if (pollTimer) clearInterval(pollTimer);
-          if (masterChartInstance) masterChartInstance.destroy();
+          if (uptimeTicker) clearInterval(uptimeTicker);
+          if (masterChart) masterChart.destroy();
         });
 
         return {
