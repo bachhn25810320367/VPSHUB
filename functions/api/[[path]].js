@@ -634,6 +634,9 @@ export async function onRequest(context) {
 
       const responseHeaders = new Headers(vpsResp.headers);
       responseHeaders.set("Access-Control-Allow-Origin", "*");
+      if (!vpsResp.ok) {
+        return jsonResponse({ error: `Tunnel (${share.tunnel_url}) unreachable: agent returned ${vpsResp.status}`, share_id: shareId }, 502);
+      }
       const isDownload = url.searchParams.get("download") === "1";
       if (isDownload) {
         responseHeaders.set("Content-Disposition", `attachment; filename="${encodeURIComponent(share.file_name)}"`);
@@ -690,9 +693,12 @@ export async function onRequest(context) {
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/list`, { headers: { "X-Agent-Secret": secret } });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
       const h = new Headers(); h.set("Access-Control-Allow-Origin", "*"); h.set("Content-Type", "application/json; charset=utf-8");
       return new Response(await r.text(), { status: r.status, headers: h });
-    } catch (e) { return jsonResponse({ error: "Proxy list failed: " + e.message }, 502); }
+    } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
   }
 
   // 6d. POST /api/files/upload-chunk (Private proxy to agent, streams body)
@@ -709,8 +715,11 @@ export async function onRequest(context) {
     fwd.set("X-Agent-Secret", secret);
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/upload-chunk`, { method: "POST", headers: fwd, body: request.body });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
       return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
-    } catch (e) { return jsonResponse({ error: "Proxy upload failed: " + e.message }, 502); }
+    } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
   }
 
   // 6e. DELETE /api/files/delete (Private proxy to agent)
@@ -723,8 +732,11 @@ export async function onRequest(context) {
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
       return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
-    } catch (e) { return jsonResponse({ error: "Proxy delete failed: " + e.message }, 502); }
+    } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
   }
 
   // 7. GET /api/servers
