@@ -29,6 +29,11 @@ export async function telemetryHistoryHandler(
   let stepSec = 600; // 10 minutes
 
   switch (range) {
+    case "Live":
+      labels = Array.from({ length: 20 }, (_, i) => `${(19 - i) * 3}s`).reverse();
+      stepSec = 3;
+      pointCount = 20;
+      break;
     case "6h":
       labels = ["6h", "5h", "4h", "3h", "2h", "1h", "Now"];
       stepSec = 3600;
@@ -128,6 +133,13 @@ export async function telemetryHistoryHandler(
   } else {
     // Calibrated multi-timescale curves for 1h, 6h, 24h, 7d
     const baselines: Record<string, any> = {
+      'Live': {
+        vps1: [2.1, 2.4, 2.8, 3.1, 2.7, 2.5, 2.9, 3.4, 3.0, 2.6, 2.8, 3.2, 3.5, 3.1, 2.7, 2.9, 3.3, 3.0, 2.7, 2.8],
+        vps2: [1.2, 1.4, 1.6, 1.5, 1.3, 1.4, 1.7, 1.8, 1.5, 1.4, 1.6, 1.7, 1.5, 1.3, 1.4, 1.6, 1.5, 1.4, 1.5, 1.4],
+        vps3: [0.6, 0.7, 0.8, 0.7, 0.6, 0.7, 0.9, 0.8, 0.7, 0.6, 0.8, 0.9, 0.7, 0.6, 0.7, 0.8, 0.7, 0.6, 0.7, 0.8],
+        rx: [1.1, 1.3, 1.5, 1.7, 1.4, 1.3, 1.6, 1.8, 1.5, 1.4, 1.7, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.5, 1.6, 1.8],
+        tx: [0.4, 0.5, 0.6, 0.7, 0.5, 0.4, 0.6, 0.7, 0.5, 0.4, 0.6, 0.8, 0.6, 0.5, 0.5, 0.7, 0.6, 0.5, 0.6, 0.6]
+      },
       '1h': {
         vps1: [2.1, 2.7, 4.4, 3.2, 2.6, 3.1, 2.8],
         vps2: [1.3, 1.6, 1.9, 1.7, 1.4, 1.6, 1.4],

@@ -260,8 +260,17 @@
                 <div class="flex items-center gap-3">
                   <div class="w-2 h-2 rounded-full bg-[#0a84ff]"></div>
                   <div>
-                    <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
-                    <p class="text-xs text-[#8e8e93]">Live multi-node metrics via Cloudflare gRPC Tunnels</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
+                      <span v-if="timeRange === 'Live'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#30d158]/10 text-[#30d158] text-[10px] font-mono border border-[#30d158]/25 shadow-[0_0_10px_rgba(48,209,88,0.15)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-ping"></span>
+                        TASKMGR WAVE
+                      </span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white/[0.06] text-[#8e8e93] text-[10px] font-mono border border-white/10">
+                        Auto-Scale: 0 – {{ currentYScaleMax }}{{ chartMode === 'cpu' ? '%' : ' MB/s' }}
+                      </span>
+                    </div>
+                    <p class="text-xs text-[#8e8e93]">Rolling buffer 20s (Shift &amp; Push) • Auto-zoom for micro-waves</p>
                   </div>
                 </div>
 
@@ -297,7 +306,7 @@
                 <!-- Apple Segmented Toggle: Time Range -->
                 <div class="inline-flex bg-[#1c1c1e] rounded-[9px] p-0.5 border border-white/10 shadow-inner">
                   <button 
-                    v-for="r in ['1h', '6h', '24h', '7d']" 
+                    v-for="r in ['Live', '1h', '6h', '24h', '7d']" 
                     :key="r"
                     @click="setTimeRange(r)"
                     :class="timeRange === r ? 'bg-[#0a84ff] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
@@ -909,9 +918,10 @@
         // Navigation & Display State
         const activeTab = ref('telemetry');
         const chartMode = ref('cpu');       // 'cpu' or 'network'
-        const timeRange = ref('1h');
+        const timeRange = ref('Live'); // Default to Task Manager Live Rolling Wave
         const isRefreshing = ref(false);
-        const pollIntervalSec = ref(1); // Realtime 1s default
+        const pollIntervalSec = ref(3); // 3s sync Task Manager cadence default
+        const currentYScaleMax = ref(10); // Auto-scale zoom 0 - 10% default
         let pollTimer = null;
         let masterChartInstance = null;
 
@@ -1030,9 +1040,83 @@
           }
         };
 
+        // =====================================================================
+        // Requirement 1: Realtime Rolling Buffer (Windows Task Manager Wave)
+        // Lưu trữ 20 điểm gần nhất, cuộn trượt liên tục từ phải sang trái (Shift & Push)
+        // =====================================================================
+        const rollingBuffer = {
+          labels: [],
+          vps1: [],
+          vps2: [],
+          vps3: [],
+          rx: [],
+          tx: []
+        };
+
+        function initRollingBuffer() {
+          const now = Date.now();
+          rollingBuffer.labels = [];
+          rollingBuffer.vps1 = [];
+          rollingBuffer.vps2 = [];
+          rollingBuffer.vps3 = [];
+          rollingBuffer.rx = [];
+          rollingBuffer.tx = [];
+
+          for (let i = 19; i >= 0; i--) {
+            const t = new Date(now - i * (pollIntervalSec.value > 0 ? pollIntervalSec.value * 1000 : 3000));
+            rollingBuffer.labels.push(t.toTimeString().split(' ')[0]);
+
+            // Realistic micro-wave variations around node baselines
+            const v1 = +(2.5 + Math.sin((20 - i) * 0.45) * 0.7 + (Math.random() * 0.2 - 0.1)).toFixed(1);
+            const v2 = +(1.4 + Math.cos((20 - i) * 0.4) * 0.35 + (Math.random() * 0.16 - 0.08)).toFixed(1);
+            const v3 = +(0.7 + Math.sin((20 - i) * 0.35) * 0.18 + (Math.random() * 0.1 - 0.05)).toFixed(1);
+            const rx = +(1.2 + Math.cos((20 - i) * 0.5) * 0.35 + (Math.random() * 0.2 - 0.1)).toFixed(2);
+            const tx = +(0.5 + Math.sin((20 - i) * 0.4) * 0.15 + (Math.random() * 0.1 - 0.05)).toFixed(2);
+
+            rollingBuffer.vps1.push(Math.max(0.5, v1));
+            rollingBuffer.vps2.push(Math.max(0.4, v2));
+            rollingBuffer.vps3.push(Math.max(0.2, v3));
+            rollingBuffer.rx.push(Math.max(0.1, rx));
+            rollingBuffer.tx.push(Math.max(0.05, tx));
+          }
+        }
+
+        function pushRollingSample() {
+          const now = new Date();
+          const timeLabel = now.toTimeString().split(' ')[0];
+
+          const v1 = servers.value[0]?.cpu_percent ?? 2.8;
+          const v2 = servers.value[1]?.cpu_percent ?? 1.4;
+          const v3 = servers.value[2]?.cpu_percent ?? 0.8;
+          const rx = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
+          const tx = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
+
+          // Shift out oldest point when reaching 20 buffer items
+          if (rollingBuffer.labels.length >= 20) {
+            rollingBuffer.labels.shift();
+            rollingBuffer.vps1.shift();
+            rollingBuffer.vps2.shift();
+            rollingBuffer.vps3.shift();
+            rollingBuffer.rx.shift();
+            rollingBuffer.tx.shift();
+          }
+
+          // Push newest point to the right
+          rollingBuffer.labels.push(timeLabel);
+          rollingBuffer.vps1.push(v1);
+          rollingBuffer.vps2.push(v2);
+          rollingBuffer.vps3.push(v3);
+          rollingBuffer.rx.push(rx);
+          rollingBuffer.tx.push(tx);
+        }
+
         const chartHistory = ref(null);
 
         async function fetchChartHistory() {
+          if (timeRange.value === 'Live') {
+            applyChartData(true);
+            return;
+          }
           try {
             const res = await fetch(`/api/telemetry/history?range=${timeRange.value}`);
             if (res.ok) {
@@ -1049,9 +1133,14 @@
 
         function setTimeRange(range) {
           timeRange.value = range;
-          chartHistory.value = null; // reset to immediate range baseline
-          applyChartData(true);
-          fetchChartHistory();
+          if (range === 'Live') {
+            chartHistory.value = null;
+            applyChartData(true);
+          } else {
+            chartHistory.value = null;
+            applyChartData(true);
+            fetchChartHistory();
+          }
         }
 
         function setChartMode(mode) {
@@ -1059,7 +1148,7 @@
           applyChartData(true);
         }
 
-        // Polling Schedule Controller (Realtime 1s default)
+        // Polling Schedule Controller (Default 3s sync)
         function updatePollingSchedule() {
           if (pollTimer) clearInterval(pollTimer);
           if (pollIntervalSec.value > 0) {
@@ -1071,7 +1160,7 @@
           }
         }
 
-        // Live Metric Generation & Ingestion
+        // Live Metric Generation & Ingestion (Shift & Push on every sync pulse)
         async function fetchMetrics() {
           isRefreshing.value = true;
           let fetchedFromServer = false;
@@ -1089,32 +1178,34 @@
           }
 
           if (!fetchedFromServer) {
-            // Simulate realistic, silky smooth real-time telemetry fluctuations
+            // Natural CPU micro-drift (-0.4% to +0.4%)
             servers.value.forEach(s => {
-              // Natural CPU micro-drift (-0.3% to +0.3%)
-              s.cpu_percent = Math.max(0.4, Math.min(98.5, +(s.cpu_percent + (Math.random() * 0.6 - 0.3)).toFixed(1)));
+              s.cpu_percent = Math.max(0.4, Math.min(98.5, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(1)));
               
-              // Memory micro-drift (+- 2MB)
-              const ramDrift = Math.floor(Math.random() * 5) - 2;
+              // Memory micro-drift (+- 3MB)
+              const ramDrift = Math.floor(Math.random() * 7) - 3;
               s.memory.used = Math.max(100*1024*1024, Math.min(s.memory.total, s.memory.used + ramDrift * 1024 * 1024));
               s.memory.percent = +((s.memory.used / s.memory.total) * 100).toFixed(1);
 
               // Network RX/TX speed jitter
-              const rxJitter = 1 + (Math.random() * 0.16 - 0.08);
-              const txJitter = 1 + (Math.random() * 0.16 - 0.08);
+              const rxJitter = 1 + (Math.random() * 0.18 - 0.09);
+              const txJitter = 1 + (Math.random() * 0.18 - 0.09);
               s.network.speed_rx_bps = Math.max(75000, Math.round(s.network.speed_rx_bps * rxJitter));
               s.network.speed_tx_bps = Math.max(30000, Math.round(s.network.speed_tx_bps * txJitter));
 
-              // Ping jitter (1ms)
+              // Ping jitter
               if (Math.random() > 0.6) {
                 s.pingMs = Math.max(4, s.pingMs + (Math.floor(Math.random() * 3) - 1));
               }
             });
           }
 
+          // Push new sample to rolling buffer (Shift & Push)
+          pushRollingSample();
+
           isRefreshing.value = false;
-          // Smooth 60fps real-time chart update (WITHOUT recreating canvas!)
-          applyChartData(false);
+          // Smooth fluid slide animation to the left
+          applyChartData(true);
         }
 
         function simulateOrFetchMetrics() {
@@ -1128,39 +1219,88 @@
           if (activeTab.value === 'expenses') fetchExpenses();
         }
 
-        // Apply Chart Data with Option for Full Transition or Instant Realtime Tick
+        // Apply Chart Data with Rolling Buffer & Auto-scale Zoom
         function applyChartData(withTransition = true) {
           if (!masterChartInstance) {
             renderCharts();
             return;
           }
 
-          const h = chartHistory.value;
-          const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
-          const timeLabels = (h && h.labels) ? h.labels : baseline.labels;
+          let timeLabels, vps1Data, vps2Data, vps3Data, rxData, txData;
 
-          const vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
-            ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
-            : [...baseline.vps1, servers.value[0].cpu_percent];
+          if (timeRange.value === 'Live') {
+            // Task Manager 20-Point Rolling Buffer
+            timeLabels = [...rollingBuffer.labels];
+            vps1Data = [...rollingBuffer.vps1];
+            vps2Data = [...rollingBuffer.vps2];
+            vps3Data = [...rollingBuffer.vps3];
+            rxData = [...rollingBuffer.rx];
+            txData = [...rollingBuffer.tx];
+          } else {
+            // Historical Multiscale Views (1h, 6h, 24h, 7d)
+            const h = chartHistory.value;
+            const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
+            timeLabels = (h && h.labels) ? h.labels : baseline.labels;
 
-          const vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
-            ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
-            : [...baseline.vps2, servers.value[1].cpu_percent];
+            vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
+              ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
+              : [...baseline.vps1, servers.value[0].cpu_percent];
 
-          const vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
-            ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
-            : [...baseline.vps3, servers.value[2].cpu_percent];
+            vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
+              ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
+              : [...baseline.vps2, servers.value[1].cpu_percent];
 
-          const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
-          const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
+            vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
+              ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
+              : [...baseline.vps3, servers.value[2].cpu_percent];
 
-          const rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
-            ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
-            : [...baseline.rx, currentRxMbps];
+            const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
+            const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
 
-          const txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
-            ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
-            : [...baseline.tx, currentTxMbps];
+            rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+              ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
+              : [...baseline.rx, currentRxMbps];
+
+            txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+              ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
+              : [...baseline.tx, currentTxMbps];
+          }
+
+          // ===================================================================
+          // Requirement 2: Auto-scale trục tung (Tự động phóng to)
+          // Nếu CPU dao động trong khoảng 0% - 5%, đồ thị tự động zoom thang đo lên tối đa 10% (thay vì 100%)
+          // Giúp hiển thị rõ ràng từng gợn sóng nhấp nhô của hệ thống!
+          // ===================================================================
+          let targetYMax = 10;
+          if (chartMode.value === 'cpu') {
+            const allCpuVals = [...vps1Data, ...vps2Data, ...vps3Data];
+            const peakVal = Math.max(...allCpuVals, 0.5);
+            if (peakVal <= 6) {
+              targetYMax = 10; // Zoom to 0 - 10% range!
+            } else if (peakVal <= 16) {
+              targetYMax = 20;
+            } else if (peakVal <= 40) {
+              targetYMax = 50;
+            } else if (peakVal <= 75) {
+              targetYMax = 80;
+            } else {
+              targetYMax = 100;
+            }
+          } else {
+            // Bandwidth mode auto-scale
+            const allBwVals = [...rxData, ...txData];
+            const peakBw = Math.max(...allBwVals, 0.2);
+            if (peakBw <= 2.5) {
+              targetYMax = 3;
+            } else if (peakBw <= 6) {
+              targetYMax = 8;
+            } else if (peakBw <= 15) {
+              targetYMax = 20;
+            } else {
+              targetYMax = Math.ceil(peakBw * 1.3);
+            }
+          }
+          currentYScaleMax.value = targetYMax;
 
           masterChartInstance.data.labels = timeLabels;
 
@@ -1174,7 +1314,7 @@
                 fill: true,
                 tension: 0.35,
                 borderWidth: 2,
-                pointRadius: 3,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               },
               {
@@ -1185,7 +1325,7 @@
                 fill: false,
                 tension: 0.35,
                 borderWidth: 1.8,
-                pointRadius: 3,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               },
               {
@@ -1197,7 +1337,7 @@
                 fill: false,
                 tension: 0.35,
                 borderWidth: 1.8,
-                pointRadius: 3,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               }
             ];
@@ -1211,7 +1351,7 @@
                 fill: true,
                 tension: 0.35,
                 borderWidth: 2,
-                pointRadius: 3,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               },
               {
@@ -1222,16 +1362,21 @@
                 fill: false,
                 tension: 0.35,
                 borderWidth: 1.8,
-                pointRadius: 3,
+                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
                 pointHoverRadius: 6
               }
             ];
           }
 
+          if (masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
+            masterChartInstance.options.scales.y.min = 0;
+            masterChartInstance.options.scales.y.max = targetYMax;
+          }
+
           if (withTransition) {
             masterChartInstance.update();
           } else {
-            masterChartInstance.update('none'); // Silky 60fps realtime tick without animation lag
+            masterChartInstance.update('none');
           }
         }
 
@@ -1252,7 +1397,7 @@
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 350 },
+                animation: { duration: 400, easing: 'easeOutQuad' },
                 plugins: {
                   legend: { display: false },
                   tooltip: {
@@ -1270,9 +1415,16 @@
                 scales: {
                   x: {
                     grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
-                    ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 10 } }
+                    ticks: { 
+                      color: '#8e8e93', 
+                      font: { family: '"SF Mono", monospace', size: 10 },
+                      maxTicksLimit: 6,
+                      maxRotation: 0
+                    }
                   },
                   y: {
+                    min: 0,
+                    max: currentYScaleMax.value || 10,
                     grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
                     ticks: {
                       color: '#8e8e93',
@@ -1285,6 +1437,8 @@
                 }
               }
             });
+
+            applyChartData(false);
           });
         }
 
@@ -1567,6 +1721,7 @@
           activeTab,
           chartMode,
           timeRange,
+          currentYScaleMax,
           setTimeRange,
           setChartMode,
           isRefreshing,

@@ -185,6 +185,14 @@ const server = http.createServer(async (req, res) => {
     const currentTxMbps = parseFloat((memoryStore.servers.reduce((a, b) => a + b.network.speed_tx_bps, 0) / (1024 * 1024)).toFixed(2));
 
     const rangeConfig = {
+            'Live': {
+        labels: Array.from({ length: 20 }, (_, i) => `${(19 - i) * 3}s`).reverse(),
+        vps1: [2.1, 2.4, 2.8, 3.1, 2.7, 2.5, 2.9, 3.4, 3.0, 2.6, 2.8, 3.2, 3.5, 3.1, 2.7, 2.9, 3.3, 3.0, 2.7, memoryStore.servers[0].cpu_percent],
+        vps2: [1.2, 1.4, 1.6, 1.5, 1.3, 1.4, 1.7, 1.8, 1.5, 1.4, 1.6, 1.7, 1.5, 1.3, 1.4, 1.6, 1.5, 1.4, 1.5, memoryStore.servers[1].cpu_percent],
+        vps3: [0.6, 0.7, 0.8, 0.7, 0.6, 0.7, 0.9, 0.8, 0.7, 0.6, 0.8, 0.9, 0.7, 0.6, 0.7, 0.8, 0.7, 0.6, 0.7, memoryStore.servers[2].cpu_percent],
+        rx: [1.1, 1.3, 1.5, 1.7, 1.4, 1.3, 1.6, 1.8, 1.5, 1.4, 1.7, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.5, 1.6, currentRxMbps],
+        tx: [0.4, 0.5, 0.6, 0.7, 0.5, 0.4, 0.6, 0.7, 0.5, 0.4, 0.6, 0.8, 0.6, 0.5, 0.5, 0.7, 0.6, 0.5, 0.6, currentTxMbps]
+      },
       '1h': {
         labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
         vps1: [2.1, 2.7, 4.4, 3.2, 2.6, 3.1, memoryStore.servers[0].cpu_percent],
