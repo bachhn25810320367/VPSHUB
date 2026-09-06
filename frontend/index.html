@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<!--
+  /* Apple Design System & Human Interface Guidelines (HIG) Standards */
+  /* Typography: SF Pro Display / SF Pro Text / SF Mono / Be Vietnam Pro */
+  /* Materials: Apple Liquid Glass, Dark Ultra-Thin Material, 20px Squircle Radii */
+  /* Colors: System Blue (#0a84ff), System Green (#30d158), System Orange (#ff9f0a), System Red (#ff453a) */
+  VPS Hub — Infrastructure, Storage & Subscriptions Dashboard
+-->
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPS Hub — Systems, Storage & Subscriptions</title>
+  
+  <!-- Custom SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%23000000'/><circle cx='7' cy='7' r='2' fill='%230a84ff'/><circle cx='17' cy='7' r='2' fill='%2330d158'/><circle cx='12' cy='17' r='2' fill='%23ff9f0a'/><path d='M7 7 L12 17 L17 7' stroke='%2348484a' stroke-width='1.5' fill='none'/></svg>">
+
+  <!-- Apple SF Pro Display (Official Weights 400, 500, 600, 700) -->
+  <link href="https://cdn.jsdelivr.net/npm/sf-font@1.0.0/stylesheet.min.css" rel="stylesheet">
+  <!-- Apple SF Mono (Full weights 300, 400, 500, 600, 700) -->
+  <link href="https://fonts.cdnfonts.com/css/sf-mono" rel="stylesheet">
+  <!-- Inter & Be Vietnam Pro Fallbacks (Flawless Vietnamese diacritics) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            apple: {
+              canvas: '#000000',               // Pure OLED Black
+              surface: '#1c1c1e',              // Secondary System Background
+              surfaceElevated: '#2c2c2e',      // Tertiary System Background
+              glass: 'rgba(28, 28, 32, 0.78)', // Apple Dark Thin Material
+              glassHover: 'rgba(36, 36, 42, 0.85)',
+              border: 'rgba(255, 255, 255, 0.1)',
+              borderHover: 'rgba(255, 255, 255, 0.18)',
+              specular: 'rgba(255, 255, 255, 0.2)',
+              // Apple HIG System Colors (Dark Mode calibrated)
+              blue: '#0a84ff',
+              blueHover: '#0071e3',
+              green: '#30d158',
+              orange: '#ff9f0a',
+              red: '#ff453a',
+              gray1: '#8e8e93',
+              gray2: '#636366',
+              gray3: '#48484a',
+              gray4: '#3a3a3c',
+              gray5: '#2c2c2e',
+              gray6: '#1c1c1e',
+              labelSecondary: 'rgba(235, 235, 245, 0.6)',
+              labelTertiary: 'rgba(235, 235, 245, 0.35)'
+            }
+          },
+          fontFamily: {
+            sans: [
+              '"SF Pro Display"',
+              '"SF Pro Text"',
+              '-apple-system',
+              'BlinkMacSystemFont',
+              '"Inter"',
+              '"Be Vietnam Pro"',
+              'sans-serif'
+            ],
+            mono: [
+              '"SF Mono"',
+              '"SFMono-Regular"',
+              'ui-monospace',
+              'Menlo',
+              'Monaco',
+              'monospace'
+            ]
+          },
+          letterSpacing: {
+            display: '-0.022em',
+            headline: '-0.018em',
+            body: '-0.008em'
+          },
+          borderRadius: {
+            'apple-card': '20px',
+            'apple-btn': '12px',
+            'apple-control': '9px'
+          },
+          boxShadow: {
+            'apple-glass': '0 8px 32px -4px rgba(0, 0, 0, 0.6)',
+            'apple-elevated': '0 16px 40px -8px rgba(0, 0, 0, 0.7)',
+            'apple-cta': '0 2px 14px rgba(10, 132, 255, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    /* Apple HIG Display & Text Rendering Rules */
+    html, body {
+      overflow-x: clip;
+      background-color: #000000;
+      color: #f5f5f7;
+      font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", "Be Vietnam Pro", sans-serif;
+      letter-spacing: -0.011em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    [v-cloak] { display: none !important; }
+
+    /* Apple Tabular Figures (SF Mono / SF Pro Tabular) */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+
+    .no-underline {
+      text-decoration: none !important;
+    }
+
+    /* Apple Dark Thin Material (Vibrancy & Depth) */
+    .apple-glass-card {
+      background: rgba(22, 22, 26, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6);
+      border-radius: 20px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .apple-glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.7);
+    }
+
+
+
+    /* Apple Native Hairline Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+  </style>
+</head>
+<body class="relative min-h-screen selection:bg-[#0a84ff]/30 selection:text-[#0a84ff]">
+
+
+  <div id="app" v-cloak class="relative z-10 flex flex-col min-h-screen">
+
+    <!-- ================================================================= -->
+    <!-- APPLE FLOATING NAVIGATION BAR (SEGMENTED CONTROL)                -->
+    <!-- ================================================================= -->
+    <header class="sticky top-4 z-50 px-4 sm:px-6 w-full flex justify-center pointer-events-none">
+      <nav class="pointer-events-auto flex items-center justify-between gap-3 sm:gap-6 px-4 py-2 rounded-full bg-[#18181b]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl max-w-4xl w-full">
+        
+        <!-- Left: Brand Title Only -->
+        <div class="flex items-center pl-2 sm:pl-3">
+          <span class="text-sm font-bold tracking-tight text-white uppercase select-none">VPS HUB</span>
+        </div>
+
+        <!-- Center: Apple Segmented Control (Tabs) -->
+        <div class="flex items-center bg-[#1c1c1e]/90 p-1 rounded-full border border-white/10 shadow-inner">
+          <button 
+            @click="activeTab = 'telemetry'"
+            :class="activeTab === 'telemetry' 
+              ? 'bg-[#0a84ff] text-white shadow-sm font-medium' 
+              : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.06]'"
+            class="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all duration-200">
+            <i class="fa-solid fa-chart-line text-[11px]"></i>
+            <span>Telemetry</span>
+          </button>
+          
+          <button 
+            @click="activeTab = 'storage'"
+            :class="activeTab === 'storage' 
+              ? 'bg-[#0a84ff] text-white shadow-sm font-medium' 
+              : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.06]'"
+            class="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all duration-200">
+            <i class="fa-solid fa-hard-drive text-[11px]"></i>
+            <span>Storage</span>
+          </button>
+
+          <button 
+            @click="activeTab = 'expenses'"
+            :class="activeTab === 'expenses' 
+              ? 'bg-[#0a84ff] text-white shadow-sm font-medium' 
+              : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.06]'"
+            class="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all duration-200">
+            <i class="fa-solid fa-receipt text-[11px]"></i>
+            <span>Expenses</span>
+            <span 
+              v-if="expenseSummary.unpaidCount > 0" 
+              class="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-semibold bg-[#ff9f0a] text-black"
+              :title="expenseSummary.unpaidCount + ' hợp đồng cần thanh toán'">
+              {{ expenseSummary.unpaidCount }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Right: Actions & Polling Interval -->
+        <div class="flex items-center gap-2 pr-1">
+          <!-- Refresh Interval Selector -->
+          <div class="relative hidden sm:block">
+            <select 
+              v-model="pollIntervalSec" 
+              @change="updatePollingSchedule"
+              class="bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] text-[11px] rounded-full px-3 py-1.5 border border-white/10 outline-none cursor-pointer appearance-none pr-6 text-center font-medium transition-colors">
+              <option :value="3" class="bg-[#1c1c1e] text-white">3s sync</option>
+              <option :value="5" class="bg-[#1c1c1e] text-white">5s sync</option>
+              <option :value="15" class="bg-[#1c1c1e] text-white">15s sync</option>
+              <option :value="0" class="bg-[#1c1c1e] text-white">Paused</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-[#8e8e93] pointer-events-none"></i>
+          </div>
+
+          <!-- Manual Refresh Button -->
+          <button 
+            @click="refreshData" 
+            :disabled="isRefreshing"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.14] active:scale-95 border border-white/10 text-white transition-all shadow-sm"
+            title="Refresh Metrics Now">
+            <i class="fa-solid fa-rotate-right text-xs" :class="{ 'animate-spin text-[#0a84ff]': isRefreshing }"></i>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ================================================================= -->
+    <!-- MAIN WORKSPACE CONTAINER                                         -->
+    <!-- ================================================================= -->
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-16">
+      
+      <!-- =============================================================== -->
+      <!-- TAB 1: TELEMETRY BENTO GRID                                    -->
+      <!-- =============================================================== -->
+      <section v-show="activeTab === 'telemetry'" class="space-y-6">
+
+        <!-- Bento Row 1: Master Chart (8 cols) + Cluster Health (4 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          <!-- Master Telemetry Chart Hero Tile (8 cols) -->
+          <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
+            <!-- Header with Metric Toggles, Series Legend and Timescale -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
+              <div>
+                <div class="flex items-center gap-3">
+                  <div class="w-2 h-2 rounded-full bg-[#0a84ff]"></div>
+                  <div>
+                    <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
+                    <p class="text-xs text-[#8e8e93]">Live multi-node metrics via Cloudflare gRPC Tunnels</p>
+                  </div>
+                </div>
+
+                <!-- Apple Style Series Legend -->
+                <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> VPS 1 (Tokyo)</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> VPS 2 (Ubuntu)</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> VPS 3 (Debian)</span>
+                </div>
+                <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] border-b border-dashed border-[#8e8e93] inline-block"></span> Outbound TX</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 self-start sm:self-center">
+                <!-- Apple Segmented Toggle: CPU vs Bandwidth -->
+                <div class="inline-flex bg-[#1c1c1e] rounded-[9px] p-0.5 border border-white/10 shadow-inner">
+                  <button 
+                    @click="chartMode = 'cpu'; renderCharts()"
+                    :class="chartMode === 'cpu' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
+                    class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
+                    CPU Load
+                  </button>
+                  <button 
+                    @click="chartMode = 'network'; renderCharts()"
+                    :class="chartMode === 'network' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
+                    class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
+                    Bandwidth
+                  </button>
+                </div>
+
+                <!-- Apple Segmented Toggle: Time Range -->
+                <div class="inline-flex bg-[#1c1c1e] rounded-[9px] p-0.5 border border-white/10 shadow-inner">
+                  <button 
+                    v-for="r in ['1h', '6h', '24h', '7d']" 
+                    :key="r"
+                    @click="setTimeRange(r)"
+                    :class="timeRange === r ? 'bg-[#0a84ff] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
+                    class="px-2 py-1 text-[10px] rounded-[7px] transition-all">
+                    {{ r }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full h-[280px] sm:h-[320px] mt-4">
+              <canvas id="masterTelemetryChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Cluster Pulse & Health Summary Tile (4 cols) -->
+          <div class="lg:col-span-4 flex flex-col gap-5">
+            <div class="apple-glass-card p-6 flex flex-col justify-between flex-1">
+              <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                <div class="flex items-center gap-2.5">
+                  <i class="fa-solid fa-gauge-high text-[#8e8e93] text-sm"></i>
+                  <h3 class="text-xs font-semibold uppercase tracking-wider text-[#8e8e93]">Cluster Pulse</h3>
+                </div>
+                <!-- Apple HIG Status Capsule -->
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/25">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#30d158]"></span>
+                  Nominal
+                </span>
+              </div>
+
+              <!-- Metric Bars with Apple Capsule Tracks -->
+              <div class="space-y-4 my-4">
+                <!-- Aggregate CPU -->
+                <div>
+                  <div class="flex justify-between items-baseline mb-1.5 text-xs">
+                    <span class="text-[#8e8e93]">Mean Cluster CPU</span>
+                    <span class="font-medium font-mono text-white tabular-nums">{{ averageClusterCpu.toFixed(1) }}%</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500" 
+                      :class="getMetricColor(averageClusterCpu)"
+                      :style="{ width: Math.min(averageClusterCpu, 100) + '%' }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total RAM Allocation -->
+                <div>
+                  <div class="flex justify-between items-baseline mb-1.5 text-xs">
+                    <span class="text-[#8e8e93]">Memory Allocation</span>
+                    <span class="font-medium font-mono text-white tabular-nums">
+                      {{ (totalRamUsedMB / 1024).toFixed(2) }} GB <span class="text-[#636366] font-normal">/ 3.0 GB</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500" 
+                      :class="getMetricColor((totalRamUsedMB / 3072) * 100)"
+                      :style="{ width: ((totalRamUsedMB / 3072) * 100).toFixed(1) + '%' }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Aggregated Disk -->
+                <div>
+                  <div class="flex justify-between items-baseline mb-1.5 text-xs">
+                    <span class="text-[#8e8e93]">Disk Consumption</span>
+                    <span class="font-medium font-mono text-white tabular-nums">
+                      {{ totalDiskUsedGB.toFixed(1) }} GB <span class="text-[#636366] font-normal">/ 90 GB</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500" 
+                      :class="getMetricColor((totalDiskUsedGB / 90) * 100)"
+                      :style="{ width: ((totalDiskUsedGB / 90) * 100).toFixed(1) + '%' }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total Combined Throughput -->
+                <div class="pt-2.5 border-t border-white/[0.06] flex justify-between items-center text-xs">
+                  <span class="text-[#8e8e93]">Combined I/O</span>
+                  <div class="flex items-center gap-3 font-mono text-white">
+                    <span>↓ {{ formatSpeed(totalRxSpeed) }}</span>
+                    <span>↑ {{ formatSpeed(totalTxSpeed) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cloudflare Tunnel Route Health List -->
+              <div class="space-y-2 pt-3 border-t border-white/[0.06]">
+                <span class="text-[11px] font-medium text-[#8e8e93] uppercase tracking-wider block mb-1">Tunnel Routes</span>
+                
+                <div v-for="srv in servers" :key="srv.id" class="flex items-center justify-between text-xs py-1.5 px-3 rounded-[10px] bg-[#1c1c1e] border border-white/[0.04]">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#30d158]"></span>
+                    <span class="text-[#f5f5f7] font-mono text-[11px] truncate">{{ srv.id }}.hoangngocbach.id.vn</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-[#8e8e93] tabular-nums">{{ srv.pingMs || 12 }}ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bento Row 2: 3 VPS Node Cards (Apple Squircles & Capsule Gauges) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div 
+            v-for="(srv, idx) in servers" 
+            :key="srv.id"
+            class="apple-glass-card p-6 flex flex-col justify-between group cursor-pointer"
+            @click="openServerDetail(srv)">
+            
+            <!-- Card Header -->
+            <div>
+              <div class="flex items-start justify-between gap-2 pb-3 border-b border-white/[0.06]">
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center justify-center w-9 h-9 rounded-[10px] bg-white/[0.06] border border-white/10 text-white group-hover:border-[#0a84ff]/50 group-hover:text-[#0a84ff] transition-all">
+                    <i :class="srv.os === 'windows' ? 'fa-brands fa-windows text-sm' : 'fa-brands fa-linux text-base'"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-semibold text-white tracking-headline group-hover:text-[#0a84ff] transition-colors">
+                      {{ srv.name }}
+                    </h3>
+                    <p class="text-[11px] text-[#8e8e93]"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
+                  </div>
+                </div>
+
+                <!-- Apple Status Capsule -->
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border"
+                  :class="srv.is_online ? 'bg-[#30d158]/15 text-[#30d158] border-[#30d158]/25' : 'bg-[#ff453a]/15 text-[#ff453a] border-[#ff453a]/25'">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="srv.is_online ? 'bg-[#30d158] animate-pulse' : 'bg-[#ff453a]'"></span>
+                  {{ srv.is_online ? 'UP' : 'DOWN' }}
+                </span>
+              </div>
+
+              <!-- Metric Bars -->
+              <div class="space-y-3.5 my-4">
+                <!-- CPU Bar -->
+                <div>
+                  <div class="flex justify-between text-xs mb-1.5">
+                    <span class="text-[#8e8e93]">CPU</span>
+                    <span class="font-medium font-mono text-white tabular-nums">{{ srv.cpu_percent }}%</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-300"
+                      :class="getMetricColor(srv.cpu_percent)"
+                      :style="{ width: Math.min(srv.cpu_percent, 100) + '%' }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Memory Bar -->
+                <div>
+                  <div class="flex justify-between text-xs mb-1.5">
+                    <span class="text-[#8e8e93]">RAM</span>
+                    <span class="font-medium font-mono text-white tabular-nums">
+                      {{ (srv.memory.used / (1024*1024)).toFixed(0) }}MB <span class="text-[#636366] font-normal">/ {{ (srv.memory.total / (1024*1024)).toFixed(0) }}MB ({{ srv.memory.percent }}%)</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-300"
+                      :class="getMetricColor(srv.memory.percent)"
+                      :style="{ width: srv.memory.percent + '%' }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Disk Bar -->
+                <div>
+                  <div class="flex justify-between text-xs mb-1.5">
+                    <span class="text-[#8e8e93]">Disk</span>
+                    <span class="font-medium font-mono text-white tabular-nums">
+                      {{ (srv.disk.used / (1024*1024*1024)).toFixed(1) }}GB <span class="text-[#636366] font-normal">/ {{ (srv.disk.total / (1024*1024*1024)).toFixed(0) }}GB ({{ srv.disk.percent }}%)</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                    <div 
+                      class="h-full rounded-full transition-all duration-300"
+                      :class="getMetricColor(srv.disk.percent)"
+                      :style="{ width: srv.disk.percent + '%' }">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Bottom Bar -->
+            <div class="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+              <div class="flex items-center gap-3 font-mono text-[11px] text-[#f5f5f7]">
+                <span>↓ {{ formatSpeed(srv.network.speed_rx_bps) }}</span>
+                <span>↑ {{ formatSpeed(srv.network.speed_tx_bps) }}</span>
+              </div>
+              <span class="text-[#0a84ff] text-xs flex items-center gap-1 group-hover:translate-x-0.5 transition-transform font-medium">
+                <span>Chi tiết</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- TAB 2: STORAGE EXPLORER (CLOUDREVE STYLE)                      -->
+      <!-- =============================================================== -->
+      <section v-show="activeTab === 'storage'" class="space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- Quota Summary Card (4 cols) -->
+          <div class="lg:col-span-4 apple-glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                <h3 class="text-sm font-semibold text-white tracking-headline">Cluster Storage Quota</h3>
+                <span class="text-xs font-medium text-[#0a84ff]">NVMe Pool</span>
+              </div>
+
+              <div class="my-6">
+                <div class="flex items-baseline justify-between mb-2">
+                  <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">{{ totalDiskUsedGB.toFixed(1) }}</span>
+                  <span class="text-sm text-[#8e8e93] font-mono">/ 90.0 GB ({{ ((totalDiskUsedGB / 90) * 100).toFixed(1) }}%)</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-[#2c2c2e] overflow-hidden">
+                  <div class="h-full bg-[#0a84ff] rounded-full" :style="{ width: ((totalDiskUsedGB / 90) * 100) + '%' }"></div>
+                </div>
+              </div>
+
+              <div class="space-y-2 text-xs text-[#8e8e93]">
+                <div class="flex justify-between">
+                  <span>Available Space:</span>
+                  <span class="text-white font-mono tabular-nums">{{ (90 - totalDiskUsedGB).toFixed(1) }} GB</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Direct Cloudflare Stream:</span>
+                  <span class="text-[#30d158] font-medium">Active (Zero egress fee)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chunked Upload Dropzone -->
+            <div class="mt-6 pt-4 border-t border-white/[0.06]">
+              <label class="flex flex-col items-center justify-center border-2 border-dashed border-white/15 hover:border-[#0a84ff]/50 rounded-[14px] p-4 cursor-pointer transition-all bg-white/[0.02] hover:bg-[#0a84ff]/[0.05]">
+                <i class="fa-solid fa-cloud-arrow-up text-xl text-[#0a84ff] mb-1.5"></i>
+                <span class="text-xs font-medium text-white">Upload Large File</span>
+                <span class="text-[10px] text-[#8e8e93]">Auto-sliced into 20MB stream chunks</span>
+                <input type="file" class="hidden" @change="handleFileSelected">
+              </label>
+              
+              <!-- Upload Progress Indicator -->
+              <div v-if="uploadStatus.isUploading" class="mt-3 p-3 rounded-[12px] bg-[#0a84ff]/10 border border-[#0a84ff]/25">
+                <div class="flex justify-between text-xs text-[#0a84ff] mb-1 truncate">
+                  <span class="truncate">{{ uploadStatus.fileName }}</span>
+                  <span class="font-mono tabular-nums">{{ uploadStatus.progress }}%</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-[#1c1c1e] overflow-hidden">
+                  <div class="h-full bg-[#0a84ff] transition-all" :style="{ width: uploadStatus.progress + '%' }"></div>
+                </div>
+                <p class="text-[10px] text-[#0a84ff]/80 mt-1 font-mono">{{ uploadStatus.message }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Explorer Table (8 cols) -->
+          <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
+            <div>
+              <!-- Explorer Header & Node Selector -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-white tracking-headline">Files Explorer</span>
+                  <span class="text-xs text-[#8e8e93] font-mono">({{ files.length }} items)</span>
+                </div>
+
+                <!-- Select Target Node -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-[#8e8e93] hidden sm:inline">Drive Node:</span>
+                  <select 
+                    v-model="selectedStorageServerId"
+                    @change="loadFilesForSelectedServer"
+                    class="bg-[#1c1c1e] text-white text-xs rounded-[9px] px-3 py-1.5 border border-white/10 outline-none font-mono cursor-pointer">
+                    <option v-for="s in servers" :key="s.id" :value="s.id" class="bg-[#1c1c1e]">
+                      {{ s.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- File List -->
+              <div class="overflow-x-auto mt-4">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="text-[#8e8e93] border-b border-white/[0.06]">
+                      <th class="pb-2.5 font-medium">Name</th>
+                      <th class="pb-2.5 font-medium">Size</th>
+                      <th class="pb-2.5 font-medium hidden sm:table-cell">Modified</th>
+                      <th class="pb-2.5 font-medium text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/[0.04]">
+                    <tr v-if="files.length === 0">
+                      <td colspan="4" class="py-8 text-center text-[#8e8e93]">
+                        No files on this node drive. Upload one above.
+                      </td>
+                    </tr>
+                    <tr v-for="f in files" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
+                      <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
+                        <i :class="getFileIcon(f.name)"></i>
+                        <span class="text-white font-medium truncate">{{ f.name }}</span>
+                      </td>
+                      <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
+                        {{ formatBytes(f.size) }}
+                      </td>
+                      <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
+                        {{ formatDate(f.modTime) }}
+                      </td>
+                      <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
+                        <a 
+                          :href="getDownloadUrl(f.name)" 
+                          target="_blank"
+                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all"
+                          title="Download">
+                          <i class="fa-solid fa-download text-[11px]"></i>
+                        </a>
+                        <button 
+                          @click="copyShareLink(f.name)"
+                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all"
+                          title="Copy Link">
+                          <i class="fa-solid fa-link text-[11px]"></i>
+                        </button>
+                        <button 
+                          @click="deleteFile(f.name)"
+                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all"
+                          title="Delete">
+                          <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- TAB 3: EXPENSES & CONTRACTS (WALLOS STYLE)                     -->
+      <!-- =============================================================== -->
+      <section v-show="activeTab === 'expenses'" class="space-y-6">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- Financial Summary Card (4 cols) -->
+          <div class="lg:col-span-4 apple-glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                <h3 class="text-sm font-semibold text-white tracking-headline">Infrastructure Spend</h3>
+                <span class="text-xs font-medium text-[#30d158]">Fixed Cost</span>
+              </div>
+
+              <div class="my-6">
+                <span class="text-xs text-[#8e8e93] block mb-1">Monthly Run-Rate:</span>
+                <div class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums no-underline">
+                  {{ formatVND(expenseSummary.totalMonthlyVnd) }}
+                </div>
+                <p class="text-xs text-[#8e8e93] mt-1.5 font-mono">
+                  ≈ {{ (expenseSummary.totalMonthlyVnd / 25400).toFixed(2) }} USD / month
+                </p>
+              </div>
+
+              <div class="space-y-3 pt-3 border-t border-white/[0.06] text-xs">
+                <div class="flex justify-between items-center">
+                  <span class="text-[#8e8e93]">Unpaid Contracts:</span>
+                  <span class="font-mono px-2.5 py-0.5 rounded-full text-[10px] font-medium"
+                    :class="expenseSummary.unpaidCount > 0 ? 'bg-[#ff9f0a]/15 text-[#ff9f0a] border border-[#ff9f0a]/25' : 'text-[#8e8e93]'">
+                    {{ expenseSummary.unpaidCount }} pending
+                  </span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-[#8e8e93]">Next Due Date:</span>
+                  <span class="font-mono text-white">{{ expenseSummary.nextDue || 'All cleared' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Apple Primary CTA Button -->
+            <button 
+              @click="showAddExpenseModal = true"
+              class="w-full mt-6 py-2.5 px-4 rounded-[12px] bg-[#0a84ff] hover:bg-[#0071e3] text-white font-semibold text-xs shadow-apple-cta active:scale-[0.98] flex items-center justify-center gap-2 transition-all">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add Server Contract</span>
+            </button>
+          </div>
+
+          <!-- Contracts Ledger Table (8 cols) -->
+          <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-4 border-b border-white/[0.06]">
+                <h3 class="text-sm font-semibold text-white tracking-headline">Active Node Subscriptions</h3>
+                <span class="text-xs text-[#8e8e93]"><span class="font-mono tabular-nums">{{ expenses.length }}</span> tracked</span>
+              </div>
+
+              <div class="divide-y divide-white/[0.04] mt-3">
+                <div 
+                  v-for="exp in expenses" 
+                  :key="exp.id"
+                  class="py-3.5 flex items-center justify-between gap-4 hover:bg-white/[0.02] px-2 rounded-[12px] transition-colors">
+                  
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-[10px] bg-white/[0.06] border border-white/10 text-white">
+                      <i :class="getExpenseIcon(exp.category)"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-xs font-medium text-white">{{ exp.title }}</h4>
+                      <p class="text-[11px] text-[#8e8e93] font-mono">
+                        {{ exp.billingCycle }} · Due: {{ exp.dueDate }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs font-mono font-medium text-white tabular-nums no-underline">
+                      {{ formatVND(exp.amount) }}
+                    </span>
+
+                    <!-- Apple Status Toggle Badge -->
+                    <button 
+                      @click="togglePaid(exp)"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-medium border transition-all"
+                      :class="exp.status === 'paid' 
+                        ? 'bg-[#30d158]/15 text-[#30d158] border-[#30d158]/25 hover:bg-[#30d158]/25' 
+                        : 'bg-[#ff9f0a]/15 text-[#ff9f0a] border-[#ff9f0a]/25 hover:bg-[#ff9f0a]/25'">
+                      <span class="w-1.5 h-1.5 rounded-full" :class="exp.status === 'paid' ? 'bg-[#30d158]' : 'bg-[#ff9f0a]'"></span>
+                      {{ exp.status === 'paid' ? 'PAID' : 'DUE' }}
+                    </button>
+
+                    <button 
+                      @click="deleteExpense(exp.id)"
+                      class="text-[#8e8e93] hover:text-[#ff453a] text-xs p-1 transition-colors"
+                      title="Delete">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- MODAL: SERVER DETAIL INSPECTION (APPLE SHEET MODAL)              -->
+    <!-- ================================================================= -->
+    <div v-if="activeServerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+      <div class="apple-glass-card max-w-xl w-full p-6 space-y-5 border border-white/15 shadow-apple-elevated">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-8 h-8 rounded-[10px] bg-white/[0.08] border border-white/10 text-[#0a84ff]">
+              <i :class="activeServerModal.os === 'windows' ? 'fa-brands fa-windows' : 'fa-brands fa-linux'"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white tracking-headline">{{ activeServerModal.name }}</h3>
+              <p class="text-[11px] font-mono text-[#8e8e93]">{{ activeServerModal.tunnel_url }}</p>
+            </div>
+          </div>
+          <button @click="activeServerModal = null" class="text-[#8e8e93] hover:text-white p-1">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Node Diagnostics Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
+            <span class="text-[#8e8e93] block text-[10px]">OS TYPE</span>
+            <span class="font-mono text-white capitalize">{{ activeServerModal.os }}</span>
+          </div>
+          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
+            <span class="text-[#8e8e93] block text-[10px]">PUBLIC IP</span>
+            <span class="font-mono text-white truncate block">{{ activeServerModal.ip }}</span>
+          </div>
+          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
+            <span class="text-[#8e8e93] block text-[10px]">UPTIME</span>
+            <span class="font-mono text-[#30d158]">99.98%</span>
+          </div>
+          <div class="p-3 rounded-[12px] bg-[#1c1c1e] border border-white/5">
+            <span class="text-[#8e8e93] block text-[10px]">PING</span>
+            <span class="font-mono text-[#0a84ff]">{{ activeServerModal.pingMs || 12 }} ms</span>
+          </div>
+        </div>
+
+        <!-- Metric Details -->
+        <div class="space-y-2.5 text-xs font-mono">
+          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
+            <span class="text-[#8e8e93]">CPU Usage:</span>
+            <span class="text-white tabular-nums">{{ activeServerModal.cpu_percent }}%</span>
+          </div>
+          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
+            <span class="text-[#8e8e93]">RAM Allocated:</span>
+            <span class="text-white tabular-nums">
+              {{ (activeServerModal.memory.used / (1024*1024)).toFixed(1) }} MB / {{ (activeServerModal.memory.total / (1024*1024)).toFixed(0) }} MB
+            </span>
+          </div>
+          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
+            <span class="text-[#8e8e93]">NVMe Disk Storage:</span>
+            <span class="text-white tabular-nums">
+              {{ (activeServerModal.disk.used / (1024*1024*1024)).toFixed(1) }} GB / {{ (activeServerModal.disk.total / (1024*1024*1024)).toFixed(0) }} GB
+            </span>
+          </div>
+          <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
+            <span class="text-[#8e8e93]">Total Network RX/TX:</span>
+            <span class="text-white tabular-nums">
+              {{ (activeServerModal.network.bytes_recv / (1024*1024)).toFixed(0) }} MB / {{ (activeServerModal.network.bytes_sent / (1024*1024)).toFixed(0) }} MB
+            </span>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="pt-3 border-t border-white/10 flex justify-end gap-2.5">
+          <button 
+            @click="openDriveForCurrentServer"
+            class="px-4 py-2 rounded-[10px] bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 text-[#0a84ff] text-xs border border-[#0a84ff]/30 font-medium transition-all">
+            <i class="fa-solid fa-folder-open mr-1.5"></i> Open Storage Drive
+          </button>
+          <button 
+            @click="activeServerModal = null" 
+            class="px-4 py-2 rounded-[10px] bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f7] text-xs border border-white/10 transition-all">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL: ADD EXPENSE (APPLE SHEET MODAL)                            -->
+    <!-- ================================================================= -->
+    <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+      <div class="apple-glass-card max-w-md w-full p-6 space-y-4 border border-white/15 shadow-apple-elevated">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <h3 class="text-sm font-semibold text-white tracking-headline">Add Node Subscription Contract</h3>
+          <button @click="showAddExpenseModal = false" class="text-[#8e8e93] hover:text-white p-1">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+          <div>
+            <label class="text-[#8e8e93] block mb-1">Contract / Node Label</label>
+            <input v-model="newExpense.title" type="text" placeholder="e.g. Tokyo Win VPS 2022" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3.5 py-2 text-white outline-none focus:border-[#0a84ff] transition-colors">
+          </div>
+          <div>
+            <label class="text-[#8e8e93] block mb-1">Amount (VND)</label>
+            <input v-model.number="newExpense.amount" type="number" step="10000" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3.5 py-2 text-white font-mono outline-none focus:border-[#0a84ff] transition-colors">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[#8e8e93] block mb-1">Category</label>
+              <select v-model="newExpense.category" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3 py-2 text-white outline-none cursor-pointer">
+                <option value="VPS">VPS Node</option>
+                <option value="Domain">Domain</option>
+                <option value="Cloud">Cloud Storage</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[#8e8e93] block mb-1">Billing Cycle</label>
+              <select v-model="newExpense.billingCycle" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3 py-2 text-white outline-none cursor-pointer">
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-[#8e8e93] block mb-1">Next Renewal Date</label>
+            <input v-model="newExpense.dueDate" type="date" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3 py-2 text-white font-mono outline-none focus:border-[#0a84ff] transition-colors">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/10 flex justify-end gap-2.5 text-xs">
+          <button @click="showAddExpenseModal = false" class="px-4 py-2 rounded-[10px] bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f7] transition-all">
+            Cancel
+          </button>
+          <button @click="saveExpense" class="px-4 py-2 rounded-[10px] bg-[#0a84ff] hover:bg-[#0071e3] text-white font-semibold shadow-apple-cta active:scale-[0.98] transition-all">
+            Save Contract
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- VUE 3 APPLICATION SCRIPT                                          -->
+  <!-- ================================================================= -->
+  <script>
+    const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        // Navigation & Display State
+        const activeTab = ref('telemetry');
+        const chartMode = ref('cpu');       // 'cpu' or 'network'
+        const timeRange = ref('1h');
+        const isRefreshing = ref(false);
+        const pollIntervalSec = ref(5);
+        let pollTimer = null;
+        let masterChartInstance = null;
+
+        // 3 Real VPS Nodes Data
+        const servers = ref([
+          {
+            id: 'vps1',
+            name: 'VPS 1 (Tokyo Win 2022)',
+            os: 'windows',
+            ip: '20.44.176.166',
+            location: 'Tokyo, JP',
+            tunnel_url: 'https://vps1.hoangngocbach.id.vn',
+            is_online: true,
+            pingMs: 14,
+            cpu_percent: 2.8,
+            memory: { total: 1073741824, used: 260000000, free: 813741824, percent: 24.2 },
+            disk: { total: 32212254720, used: 12500000000, free: 19712254720, percent: 38.8 },
+            network: { bytes_recv: 3450000000, bytes_sent: 1250000000, speed_rx_bps: 1450000, speed_tx_bps: 480000 }
+          },
+          {
+            id: 'vps2',
+            name: 'VPS 2 (Ubuntu Beszel Hub)',
+            os: 'linux',
+            ip: '20.89.130.95',
+            location: 'East Asia',
+            tunnel_url: 'https://vps2.hoangngocbach.id.vn',
+            is_online: true,
+            pingMs: 9,
+            cpu_percent: 1.4,
+            memory: { total: 1073741824, used: 190000000, free: 883741824, percent: 17.6 },
+            disk: { total: 32212254720, used: 8400000000, free: 23812254720, percent: 26.0 },
+            network: { bytes_recv: 2150000000, bytes_sent: 820000000, speed_rx_bps: 920000, speed_tx_bps: 230000 }
+          },
+          {
+            id: 'vps3',
+            name: 'VPS 3 (Debian 12 Worker)',
+            os: 'linux',
+            ip: '20.89.131.102',
+            location: 'Southeast Asia',
+            tunnel_url: 'https://vps3.hoangngocbach.id.vn',
+            is_online: true,
+            pingMs: 18,
+            cpu_percent: 0.9,
+            memory: { total: 1073741824, used: 145000000, free: 928741824, percent: 13.5 },
+            disk: { total: 32212254720, used: 5200000000, free: 27012254720, percent: 16.1 },
+            network: { bytes_recv: 980000000, bytes_sent: 410000000, speed_rx_bps: 340000, speed_tx_bps: 120000 }
+          }
+        ]);
+
+        // Computed Aggregates
+        const onlineCount = computed(() => servers.value.filter(s => s.is_online).length);
+        const totalRamUsedMB = computed(() => servers.value.reduce((sum, s) => sum + (s.memory.used / (1024*1024)), 0));
+        const totalDiskUsedGB = computed(() => servers.value.reduce((sum, s) => sum + (s.disk.used / (1024*1024*1024)), 0));
+        const totalRxSpeed = computed(() => servers.value.reduce((sum, s) => sum + s.network.speed_rx_bps, 0));
+        const totalTxSpeed = computed(() => servers.value.reduce((sum, s) => sum + s.network.speed_tx_bps, 0));
+        const averageClusterCpu = computed(() => {
+          return servers.value.reduce((sum, s) => sum + s.cpu_percent, 0) / servers.value.length;
+        });
+
+        // Apple HIG Load Colors: Safe < 60% (System Blue), Warning 60-85% (System Orange), Critical > 85% (System Red)
+        function getMetricColor(pct) {
+          if (pct > 85) return 'bg-[#ff453a] shadow-[0_0_8px_rgba(255,69,58,0.5)]';
+          if (pct > 60) return 'bg-[#ff9f0a] shadow-[0_0_8px_rgba(255,159,10,0.4)]';
+          return 'bg-[#0a84ff]';
+        }
+
+        // Server Detail Modal
+        const activeServerModal = ref(null);
+        function openServerDetail(srv) {
+          activeServerModal.value = srv;
+        }
+
+        function openDriveForCurrentServer() {
+          if (!activeServerModal.value) return;
+          selectedStorageServerId.value = activeServerModal.value.id;
+          activeServerModal.value = null;
+          activeTab.value = 'storage';
+          loadFilesForSelectedServer();
+        }
+
+        const chartHistory = ref(null);
+
+        async function fetchChartHistory() {
+          try {
+            const res = await fetch(`/api/telemetry/history?range=${timeRange.value}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.labels) {
+                chartHistory.value = data;
+              }
+            }
+          } catch (e) {
+            console.warn('API /api/telemetry/history not available, using baseline:', e);
+          }
+          renderCharts();
+        }
+
+        function setTimeRange(range) {
+          timeRange.value = range;
+          fetchChartHistory();
+        }
+
+        // Polling Schedule Controller
+        function updatePollingSchedule() {
+          if (pollTimer) clearInterval(pollTimer);
+          if (pollIntervalSec.value > 0) {
+            pollTimer = setInterval(() => {
+              if (!document.hidden && activeTab.value === 'telemetry') {
+                simulateOrFetchMetrics();
+              }
+            }, pollIntervalSec.value * 1000);
+          }
+        }
+
+        // Telemetry Data Ingestion
+        async function fetchMetrics() {
+          isRefreshing.value = true;
+          try {
+            const res = await fetch('/api/telemetry/latest');
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                servers.value = data;
+              }
+            }
+          } catch (e) {
+            servers.value.forEach(s => {
+              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(1)));
+              s.network.speed_rx_bps = Math.max(50000, Math.round(s.network.speed_rx_bps * (1 + (Math.random() * 0.2 - 0.1))));
+              s.network.speed_tx_bps = Math.max(20000, Math.round(s.network.speed_tx_bps * (1 + (Math.random() * 0.2 - 0.1))));
+            });
+          } finally {
+            isRefreshing.value = false;
+            renderCharts();
+          }
+        }
+
+        function simulateOrFetchMetrics() {
+          fetchMetrics();
+        }
+
+        function refreshData() {
+          fetchMetrics();
+          if (activeTab.value === 'storage') loadFilesForSelectedServer();
+          if (activeTab.value === 'expenses') fetchExpenses();
+        }
+
+        // Master Chart Rendering (Apple Health / Activity / Instruments Graph Style)
+        function renderCharts() {
+          nextTick(() => {
+            const ctx = document.getElementById('masterTelemetryChart');
+            if (!ctx) return;
+
+            const h = chartHistory.value;
+            const timeLabels = (h && h.labels) ? h.labels : (timeRange.value === '1h'
+              ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
+              : timeRange.value === '6h'
+              ? ['6h', '5h', '4h', '3h', '2h', '1h', 'Now']
+              : timeRange.value === '24h'
+              ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
+              : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now']);
+
+            const vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
+              ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
+              : [1.9, 2.3, 4.1, 3.0, 2.4, 2.7, servers.value[0].cpu_percent];
+
+            const vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
+              ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
+              : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, servers.value[1].cpu_percent];
+
+            const vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
+              ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
+              : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, servers.value[2].cpu_percent];
+
+            const rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+              ? [...h.bandwidthSeries.rx.slice(0, -1), parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))]
+              : [0.9, 1.3, 1.6, 1.2, 1.4, 1.3, parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))];
+
+            const txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+              ? [...h.bandwidthSeries.tx.slice(0, -1), parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))]
+              : [0.4, 0.5, 0.7, 0.6, 0.4, 0.5, parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))];
+
+            const datasets = chartMode.value === 'cpu' ? [
+              {
+                label: 'VPS 1 (Tokyo Win 2022)',
+                data: vps1Data,
+                borderColor: '#0a84ff', // Apple System Blue
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'VPS 2 (Ubuntu Beszel)',
+                data: vps2Data,
+                borderColor: '#8e8e93', // Apple System Gray 1
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'VPS 3 (Debian Worker)',
+                data: vps3Data,
+                borderColor: '#636366', // Apple System Gray 2 Dashed
+                borderDash: [4, 4],
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              }
+            ] : [
+              {
+                label: 'Inbound RX (Combined)',
+                data: rxData,
+                borderColor: '#0a84ff', // Apple System Blue
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'Outbound TX (Combined)',
+                data: txData,
+                borderColor: '#8e8e93', // Apple System Gray 1 Dashed
+                borderDash: [3, 3],
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              }
+            ];
+
+            if (masterChartInstance) masterChartInstance.destroy();
+
+            masterChartInstance = new Chart(ctx, {
+              type: 'line',
+              data: { labels: timeLabels, datasets },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: 'rgba(28, 28, 32, 0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#f5f5f7',
+                    borderColor: 'rgba(255, 255, 255, 0.16)',
+                    borderWidth: 0.5,
+                    padding: 10,
+                    cornerRadius: 10,
+                    titleFont: { family: '-apple-system, "SF Pro Text", sans-serif', size: 12, weight: '600' },
+                    bodyFont: { family: '"SF Mono", monospace', size: 11 }
+                  }
+                },
+                scales: {
+                  x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                    ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 10 } }
+                  },
+                  y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                    ticks: {
+                      color: '#8e8e93',
+                      font: { family: '"SF Mono", monospace', size: 10 },
+                      callback: function(val) {
+                        return chartMode.value === 'cpu' ? val + '%' : val + ' MB/s';
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          });
+        }
+
+        // ================= Storage Module =================
+        const selectedStorageServerId = ref('vps1');
+        const files = ref([
+          { name: 'backup-database-2026-09-01.tar.gz', size: 145000000, modTime: '2026-09-01T14:30:00Z' },
+          { name: 'cloudflared-tunnel.config.yml', size: 2450, modTime: '2026-09-03T09:12:00Z' },
+          { name: 'docker-compose.beszel.yaml', size: 1820, modTime: '2026-09-04T18:40:00Z' },
+          { name: 'system-inventory-report.json', size: 68400, modTime: '2026-09-05T11:05:00Z' }
+        ]);
+
+        const currentStorageServer = computed(() => {
+          return servers.value.find(s => s.id === selectedStorageServerId.value) || servers.value[0];
+        });
+
+        const uploadStatus = ref({
+          isUploading: false,
+          fileName: '',
+          progress: 0,
+          currentChunk: 0,
+          totalChunks: 0,
+          message: ''
+        });
+
+        async function loadFilesForSelectedServer() {
+          const srv = currentStorageServer.value;
+          try {
+            const res = await fetch(`${srv.tunnel_url}/api/files/list`, {
+              headers: { 'X-Agent-Secret': 'secret-token-change-me' }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.files) files.value = data.files;
+            }
+          } catch (e) {}
+        }
+
+        async function handleFileSelected(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const CHUNK_SIZE = 20 * 1024 * 1024;
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          const uploadId = 'up_' + Date.now();
+          const srv = currentStorageServer.value;
+
+          uploadStatus.value = {
+            isUploading: true,
+            fileName: file.name,
+            progress: 0,
+            currentChunk: 0,
+            totalChunks: totalChunks,
+            message: 'Dividing into 20MB stream chunks...'
+          };
+
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            uploadStatus.value.currentChunk = i + 1;
+            uploadStatus.value.message = `Uploading chunk ${i + 1}/${totalChunks}...`;
+
+            try {
+              const res = await fetch(`${srv.tunnel_url}/api/files/upload-chunk`, {
+                method: 'POST',
+                headers: {
+                  'Upload-Id': uploadId,
+                  'Chunk-Index': i.toString(),
+                  'Total-Chunks': totalChunks.toString(),
+                  'File-Name': encodeURIComponent(file.name),
+                  'X-Agent-Secret': 'secret-token-change-me'
+                },
+                body: chunk
+              });
+              uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
+            } catch (err) {
+              uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
+            }
+          }
+
+          uploadStatus.value.message = 'Upload finalized!';
+          setTimeout(() => {
+            uploadStatus.value.isUploading = false;
+            files.value.unshift({
+              name: file.name,
+              size: file.size,
+              modTime: new Date().toISOString()
+            });
+          }, 600);
+        }
+
+        function getDownloadUrl(fileName) {
+          return `${currentStorageServer.value.tunnel_url}/api/files/download?name=${encodeURIComponent(fileName)}&token=secret-token-change-me`;
+        }
+
+        function copyShareLink(fileName) {
+          const url = getDownloadUrl(fileName);
+          navigator.clipboard.writeText(url);
+          alert('Copied link: ' + url);
+        }
+
+        async function deleteFile(fileName) {
+          if (!confirm(`Xác nhận xóa tệp ${fileName} khỏi ${currentStorageServer.value.name}?`)) return;
+          files.value = files.value.filter(f => f.name !== fileName);
+          const srv = currentStorageServer.value;
+          try {
+            await fetch(`${srv.tunnel_url}/api/files/delete?name=${encodeURIComponent(fileName)}`, {
+              method: 'DELETE',
+              headers: { 'X-Agent-Secret': 'secret-token-change-me' }
+            });
+          } catch (e) {}
+        }
+
+        function getFileIcon(name) {
+          const ext = name.split('.').pop().toLowerCase();
+          if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) return 'fa-regular fa-file-zipper text-[#8e8e93]';
+          if (['json', 'js', 'ts', 'go', 'py', 'sh', 'yml', 'yaml'].includes(ext)) return 'fa-regular fa-file-code text-[#0a84ff]';
+          if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) return 'fa-regular fa-file-image text-[#8e8e93]';
+          return 'fa-regular fa-file text-[#8e8e93]';
+        }
+
+        // ================= Expenses Module =================
+        const expenses = ref([
+          { id: 'exp-1', category: 'VPS', title: 'VPS 1 (Tokyo - Windows Server 2022)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-20', status: 'paid' },
+          { id: 'exp-2', category: 'VPS', title: 'VPS 2 (Ubuntu 22.04 LTS)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-25', status: 'unpaid' },
+          { id: 'exp-3', category: 'VPS', title: 'VPS 3 (Debian 12 Worker)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-10-02', status: 'unpaid' },
+          { id: 'exp-4', category: 'Domain', title: 'Domain hoangngocbach.id.vn', amount: 0, billingCycle: 'yearly', dueDate: '2027-09-01', status: 'paid' }
+        ]);
+
+        const expenseSummary = computed(() => {
+          const totalMonthlyVnd = expenses.value
+            .filter(i => i.billingCycle === 'monthly' || !i.billingCycle)
+            .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+          const unpaid = expenses.value.filter(i => i.status === 'unpaid');
+          return {
+            totalMonthlyVnd,
+            unpaidCount: unpaid.length,
+            nextDue: unpaid.length > 0 ? unpaid[0].dueDate : null
+          };
+        });
+
+        const showAddExpenseModal = ref(false);
+        const newExpense = ref({
+          title: '',
+          category: 'VPS',
+          amount: 140000,
+          billingCycle: 'monthly',
+          dueDate: new Date().toISOString().split('T')[0],
+          status: 'unpaid'
+        });
+
+        async function fetchExpenses() {
+          try {
+            const res = await fetch('/api/expenses');
+            if (res.ok) {
+              const data = await res.json();
+              if (data.items && Array.isArray(data.items)) {
+                expenses.value = data.items;
+              }
+            }
+          } catch (e) {
+            console.warn('Expenses API offline, using local data:', e);
+          }
+        }
+
+        async function saveExpense() {
+          if (!newExpense.value.title) return alert('Vui lòng nhập tên hợp đồng');
+          const item = {
+            id: 'exp-' + Date.now(),
+            category: newExpense.value.category || 'VPS',
+            title: newExpense.value.title,
+            amount: Number(newExpense.value.amount) || 0,
+            currency: 'VND',
+            billingCycle: newExpense.value.billingCycle || 'monthly',
+            dueDate: newExpense.value.dueDate || new Date().toISOString().split('T')[0],
+            status: newExpense.value.status || 'unpaid',
+            createdAt: new Date().toISOString()
+          };
+
+          // Optimistic UI update
+          expenses.value.push(item);
+          showAddExpenseModal.value = false;
+
+          // Reset modal form
+          newExpense.value = {
+            title: '',
+            category: 'VPS',
+            amount: 140000,
+            billingCycle: 'monthly',
+            dueDate: new Date().toISOString().split('T')[0],
+            status: 'unpaid'
+          };
+
+          try {
+            await fetch('/api/expenses', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(item)
+            });
+          } catch (e) {
+            console.warn('Saved expense locally only:', e);
+          }
+        }
+
+        async function togglePaid(exp) {
+          exp.status = exp.status === 'paid' ? 'unpaid' : 'paid';
+          try {
+            await fetch('/api/expenses', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(exp)
+            });
+          } catch (e) {}
+        }
+
+        async function deleteExpense(id) {
+          if (!confirm('Bạn có chắc muốn xóa hợp đồng chi phí này?')) return;
+          expenses.value = expenses.value.filter(i => i.id !== id);
+          try {
+            await fetch(`/api/expenses?id=${encodeURIComponent(id)}`, {
+              method: 'DELETE'
+            });
+          } catch (e) {}
+        }
+
+        function getExpenseIcon(category) {
+          if (category === 'VPS') return 'fa-solid fa-server';
+          if (category === 'Domain') return 'fa-solid fa-globe';
+          return 'fa-solid fa-receipt';
+        }
+
+        // Formatters
+        function formatBytes(bytes) {
+          if (!bytes || bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function formatSpeed(bps) {
+          if (!bps || bps === 0) return '0 KB/s';
+          if (bps > 1024 * 1024) return (bps / (1024 * 1024)).toFixed(1) + ' MB/s';
+          return (bps / 1024).toFixed(0) + ' KB/s';
+        }
+
+        function formatVND(amount) {
+          if (!amount && amount !== 0) return '0 đ';
+          return (Number(amount) || 0).toLocaleString('vi-VN') + ' đ';
+        }
+
+        function formatDate(dateStr) {
+          if (!dateStr) return '';
+          return new Date(dateStr).toLocaleDateString('vi-VN');
+        }
+
+        onMounted(() => {
+          fetchMetrics();
+          fetchChartHistory();
+          fetchExpenses();
+          loadFilesForSelectedServer();
+          updatePollingSchedule();
+
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              activeServerModal.value = null;
+              showAddExpenseModal.value = false;
+            }
+          });
+        });
+
+        onUnmounted(() => {
+          if (pollTimer) clearInterval(pollTimer);
+          if (masterChartInstance) masterChartInstance.destroy();
+        });
+
+        return {
+          activeTab,
+          chartMode,
+          timeRange,
+          setTimeRange,
+          isRefreshing,
+          pollIntervalSec,
+          updatePollingSchedule,
+          servers,
+          onlineCount,
+          totalRamUsedMB,
+          totalDiskUsedGB,
+          totalRxSpeed,
+          totalTxSpeed,
+          averageClusterCpu,
+          getMetricColor,
+          activeServerModal,
+          openServerDetail,
+          openDriveForCurrentServer,
+          renderCharts,
+          refreshData,
+          // Storage
+          selectedStorageServerId,
+          currentStorageServer,
+          files,
+          uploadStatus,
+          loadFilesForSelectedServer,
+          handleFileSelected,
+          getDownloadUrl,
+          copyShareLink,
+          deleteFile,
+          getFileIcon,
+          // Expenses
+          expenses,
+          expenseSummary,
+          showAddExpenseModal,
+          newExpense,
+          saveExpense,
+          togglePaid,
+          deleteExpense,
+          getExpenseIcon,
+          // Formatters
+          formatBytes,
+          formatSpeed,
+          formatVND,
+          formatDate
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

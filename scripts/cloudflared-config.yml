@@ -1,0 +1,25 @@
+# =====================================================================
+# Cloudflare Zero Trust Tunnel Configuration (hoangngocbach.id.vn)
+# =====================================================================
+# Place this file in /etc/cloudflared/config.yml (Linux)
+# or C:\ProgramData\cloudflared\config.yml (Windows)
+
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID>.json
+
+# Zero-Egress Ingress Routing to Agent port 8085
+ingress:
+  # VPS 1 (Tokyo Windows Server 2022)
+  - hostname: vps1.hoangngocbach.id.vn
+    service: http://localhost:8085
+
+  # VPS 2 (Ubuntu 22.04 Beszel Hub)
+  - hostname: vps2.hoangngocbach.id.vn
+    service: http://localhost:8085
+
+  # VPS 3 (Debian 12 Worker Storage Pool)
+  - hostname: vps3.hoangngocbach.id.vn
+    service: http://localhost:8085
+
+  # Catch-all fallback for other subdomains
+  - service: http_status:404

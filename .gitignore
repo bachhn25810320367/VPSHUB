@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Azure Functions local settings (secrets)
+local.settings.json
+api/local.settings.json
+*.env
+*.env.*
+
+# Build artifacts & distribution
+dist/
+api/dist/
+*.log
+
+# Go binaries & storage data
+agent/vps-agent-windows.exe
+agent/vps-agent-linux
+*.exe
+data/
+agent/data/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
