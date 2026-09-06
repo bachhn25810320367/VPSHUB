@@ -2378,7 +2378,8 @@
           progress: 0,
           currentChunk: 0,
           totalChunks: 0,
-          message: ''
+          message: '',
+          failedChunks: []
         });
 
         async function loadFilesForSelectedServer() {
@@ -2409,6 +2410,7 @@
             progress: 0,
             currentChunk: 0,
             totalChunks: totalChunks,
+            failedChunks: [],
             message: 'Dividing into 20MB stream chunks...'
           };
 
@@ -2435,18 +2437,26 @@
               if (!res.ok) throw new Error('chunk ' + (i+1) + ' -> HTTP ' + res.status);
               uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
             } catch (err) {
+              uploadStatus.value.failedChunks.push(i + 1);
+              uploadStatus.value.message = `Chunk ${i + 1}/${totalChunks} failed (${err.message}). Continuing...`;
               uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
             }
           }
 
-          uploadStatus.value.message = 'Upload finalized!';
+          if (uploadStatus.value.failedChunks.length > 0) {
+            uploadStatus.value.message = `Upload incomplete: chunks ${uploadStatus.value.failedChunks.join(', ')} failed. Retry upload.`;
+          } else {
+            uploadStatus.value.message = 'Upload finalized!';
+          }
           setTimeout(() => {
             uploadStatus.value.isUploading = false;
-            files.value.unshift({
-              name: file.name,
-              size: file.size,
-              modTime: new Date().toISOString()
-            });
+            if (uploadStatus.value.failedChunks.length === 0) {
+              files.value.unshift({
+                name: file.name,
+                size: file.size,
+                modTime: new Date().toISOString()
+              });
+            }
           }, 600);
         }
 
