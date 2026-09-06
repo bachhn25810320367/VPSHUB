@@ -185,45 +185,90 @@ const server = http.createServer(async (req, res) => {
     const currentTxMbps = parseFloat((memoryStore.servers.reduce((a, b) => a + b.network.speed_tx_bps, 0) / (1024 * 1024)).toFixed(2));
 
     const rangeConfig = {
-            'Live': {
+      'Live': {
         labels: Array.from({ length: 20 }, (_, i) => `${(19 - i) * 3}s`).reverse(),
-        vps1: [2.1, 2.4, 2.8, 3.1, 2.7, 2.5, 2.9, 3.4, 3.0, 2.6, 2.8, 3.2, 3.5, 3.1, 2.7, 2.9, 3.3, 3.0, 2.7, memoryStore.servers[0].cpu_percent],
-        vps2: [1.2, 1.4, 1.6, 1.5, 1.3, 1.4, 1.7, 1.8, 1.5, 1.4, 1.6, 1.7, 1.5, 1.3, 1.4, 1.6, 1.5, 1.4, 1.5, memoryStore.servers[1].cpu_percent],
-        vps3: [0.6, 0.7, 0.8, 0.7, 0.6, 0.7, 0.9, 0.8, 0.7, 0.6, 0.8, 0.9, 0.7, 0.6, 0.7, 0.8, 0.7, 0.6, 0.7, memoryStore.servers[2].cpu_percent],
-        rx: [1.1, 1.3, 1.5, 1.7, 1.4, 1.3, 1.6, 1.8, 1.5, 1.4, 1.7, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.5, 1.6, currentRxMbps],
-        tx: [0.4, 0.5, 0.6, 0.7, 0.5, 0.4, 0.6, 0.7, 0.5, 0.4, 0.6, 0.8, 0.6, 0.5, 0.5, 0.7, 0.6, 0.5, 0.6, currentTxMbps]
+        ram: {
+          vps1: [94.8, 95.1, 95.4, 94.9, 95.2, 95.6, 95.0, 95.3, 95.5, 95.1, 94.8, 95.2, 95.7, 95.3, 94.9, 95.1, 95.4, 95.2, 95.0, memoryStore.servers[0].memory.percent],
+          vps2: [52.8, 53.1, 53.5, 53.0, 53.4, 53.8, 53.2, 53.6, 53.4, 53.1, 52.9, 53.3, 53.7, 53.4, 53.0, 53.2, 53.6, 53.5, 53.2, memoryStore.servers[1].memory.percent],
+          vps3: [47.5, 47.8, 48.2, 47.9, 48.0, 48.3, 47.7, 48.1, 47.9, 47.6, 47.4, 47.9, 48.2, 48.0, 47.7, 47.8, 48.1, 48.0, 47.8, memoryStore.servers[2].memory.percent]
+        },
+        cpu: {
+          vps1: [1.2, 1.5, 1.8, 1.4, 1.6, 2.1, 1.5, 1.7, 1.9, 1.3, 1.5, 1.8, 2.2, 1.6, 1.4, 1.7, 1.9, 1.5, 1.3, memoryStore.servers[0].cpu_percent],
+          vps2: [0.2, 0.3, 0.4, 0.3, 0.2, 0.4, 0.3, 0.3, 0.4, 0.2, 0.3, 0.4, 0.5, 0.3, 0.2, 0.3, 0.4, 0.3, 0.2, memoryStore.servers[1].cpu_percent],
+          vps3: [0.4, 0.5, 0.6, 0.5, 0.4, 0.6, 0.5, 0.6, 0.7, 0.5, 0.4, 0.5, 0.7, 0.6, 0.5, 0.5, 0.6, 0.5, 0.4, memoryStore.servers[2].cpu_percent]
+        },
+        bandwidth: {
+          rx: [1.2, 1.4, 1.6, 1.5, 1.3, 1.7, 1.5, 1.6, 1.8, 1.4, 1.3, 1.5, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.4, currentRxMbps],
+          tx: [0.4, 0.5, 0.6, 0.5, 0.4, 0.6, 0.5, 0.6, 0.7, 0.5, 0.4, 0.5, 0.8, 0.6, 0.5, 0.5, 0.7, 0.6, 0.5, currentTxMbps]
+        }
       },
       '1h': {
         labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
-        vps1: [2.1, 2.7, 4.4, 3.2, 2.6, 3.1, memoryStore.servers[0].cpu_percent],
-        vps2: [1.3, 1.6, 1.9, 1.7, 1.4, 1.6, memoryStore.servers[1].cpu_percent],
-        vps3: [0.6, 0.8, 0.7, 0.6, 0.7, 0.6, memoryStore.servers[2].cpu_percent],
-        rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7, currentRxMbps],
-        tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7, currentTxMbps]
+        ram: {
+          vps1: [93.5, 94.2, 95.6, 94.8, 95.1, 95.5, memoryStore.servers[0].memory.percent],
+          vps2: [51.8, 52.4, 53.9, 53.0, 52.7, 53.6, memoryStore.servers[1].memory.percent],
+          vps3: [46.8, 47.2, 48.5, 48.0, 47.4, 48.1, memoryStore.servers[2].memory.percent]
+        },
+        cpu: {
+          vps1: [1.2, 1.5, 2.4, 1.8, 1.4, 1.6, memoryStore.servers[0].cpu_percent],
+          vps2: [0.2, 0.3, 0.5, 0.4, 0.2, 0.3, memoryStore.servers[1].cpu_percent],
+          vps3: [0.4, 0.5, 0.8, 0.6, 0.4, 0.5, memoryStore.servers[2].cpu_percent]
+        },
+        bandwidth: {
+          rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7, currentRxMbps],
+          tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7, currentTxMbps]
+        }
       },
       '6h': {
         labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
-        vps1: [1.6, 2.1, 5.9, 4.4, 3.2, 2.8, memoryStore.servers[0].cpu_percent],
-        vps2: [1.0, 1.3, 3.2, 2.4, 1.8, 1.4, memoryStore.servers[1].cpu_percent],
-        vps3: [0.4, 0.5, 1.4, 0.9, 0.7, 0.6, memoryStore.servers[2].cpu_percent],
-        rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6, currentRxMbps],
-        tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6, currentTxMbps]
+        ram: {
+          vps1: [88.2, 91.5, 96.8, 97.2, 95.9, 94.8, memoryStore.servers[0].memory.percent],
+          vps2: [48.5, 51.0, 58.4, 55.8, 54.0, 53.1, memoryStore.servers[1].memory.percent],
+          vps3: [44.0, 45.6, 51.8, 49.8, 48.5, 47.5, memoryStore.servers[2].memory.percent]
+        },
+        cpu: {
+          vps1: [0.9, 1.3, 5.8, 3.4, 2.1, 1.4, memoryStore.servers[0].cpu_percent],
+          vps2: [0.2, 0.3, 2.4, 1.5, 0.8, 0.3, memoryStore.servers[1].cpu_percent],
+          vps3: [0.3, 0.4, 1.9, 1.1, 0.7, 0.4, memoryStore.servers[2].cpu_percent]
+        },
+        bandwidth: {
+          rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6, currentRxMbps],
+          tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6, currentTxMbps]
+        }
       },
       '24h': {
         labels: ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'],
-        vps1: [0.9, 0.7, 2.2, 7.6, 5.5, 3.3, memoryStore.servers[0].cpu_percent],
-        vps2: [0.6, 0.5, 1.5, 4.9, 3.7, 2.0, memoryStore.servers[1].cpu_percent],
-        vps3: [0.3, 0.2, 0.8, 2.3, 1.6, 0.8, memoryStore.servers[2].cpu_percent],
-        rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5, currentRxMbps],
-        tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9, currentTxMbps]
+        ram: {
+          vps1: [82.4, 85.0, 92.6, 96.5, 95.0, 93.5, memoryStore.servers[0].memory.percent],
+          vps2: [42.0, 43.8, 52.5, 58.2, 55.0, 51.2, memoryStore.servers[1].memory.percent],
+          vps3: [38.5, 40.0, 47.8, 52.0, 49.2, 46.0, memoryStore.servers[2].memory.percent]
+        },
+        cpu: {
+          vps1: [0.5, 0.4, 1.8, 7.5, 4.8, 2.2, memoryStore.servers[0].cpu_percent],
+          vps2: [0.1, 0.1, 0.9, 3.8, 2.4, 0.8, memoryStore.servers[1].cpu_percent],
+          vps3: [0.2, 0.2, 0.8, 2.1, 1.5, 0.6, memoryStore.servers[2].cpu_percent]
+        },
+        bandwidth: {
+          rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5, currentRxMbps],
+          tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9, currentTxMbps]
+        }
       },
       '7d': {
         labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'],
-        vps1: [4.9, 5.6, 5.2, 6.4, 4.6, 2.1, memoryStore.servers[0].cpu_percent],
-        vps2: [3.0, 3.4, 3.2, 3.9, 2.7, 1.3, memoryStore.servers[1].cpu_percent],
-        vps3: [1.3, 1.6, 1.4, 1.8, 1.2, 0.5, memoryStore.servers[2].cpu_percent],
-        rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6, currentRxMbps],
-        tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6, currentTxMbps]
+        ram: {
+          vps1: [78.0, 83.5, 89.2, 95.8, 96.4, 93.8, memoryStore.servers[0].memory.percent],
+          vps2: [39.2, 44.0, 48.6, 54.2, 56.8, 50.5, memoryStore.servers[1].memory.percent],
+          vps3: [35.0, 38.5, 42.8, 48.0, 49.8, 44.8, memoryStore.servers[2].memory.percent]
+        },
+        cpu: {
+          vps1: [3.8, 4.9, 5.2, 6.1, 4.4, 1.8, memoryStore.servers[0].cpu_percent],
+          vps2: [1.8, 2.4, 2.8, 3.2, 2.1, 0.8, memoryStore.servers[1].cpu_percent],
+          vps3: [1.1, 1.4, 1.5, 1.9, 1.3, 0.6, memoryStore.servers[2].cpu_percent]
+        },
+        bandwidth: {
+          rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6, currentRxMbps],
+          tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6, currentTxMbps]
+        }
       }
     };
 
@@ -231,8 +276,9 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       range,
       labels: sel.labels,
-      cpuSeries: { vps1: sel.vps1, vps2: sel.vps2, vps3: sel.vps3 },
-      bandwidthSeries: { rx: sel.rx, tx: sel.tx }
+      ramSeries: sel.ram,
+      cpuSeries: sel.cpu,
+      bandwidthSeries: sel.bandwidth
     });
   }
 
