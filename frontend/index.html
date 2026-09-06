@@ -441,7 +441,6 @@
                 <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> WindowServer</span>
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> Ubuntu</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> Debian</span>
                 </div>
                 <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
@@ -523,14 +522,14 @@
                   <div class="flex justify-between items-baseline mb-1.5 text-xs">
                     <span class="text-[#8e8e93]">Memory Allocation</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ (totalRamUsedMB / 1024).toFixed(2) }} GB <span class="text-[#636366] font-normal">/ 3.0 GB</span>
+                      {{ (totalRamUsedMB / 1024).toFixed(2) }} GB <span class="text-[#636366] font-normal">/ 2.0 GB</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
                     <div 
                       class="h-full rounded-full transition-all duration-500" 
-                      :class="getMetricColor((totalRamUsedMB / 3072) * 100)"
-                      :style="{ width: ((totalRamUsedMB / 3072) * 100).toFixed(1) + '%' }">
+                      :class="getMetricColor((totalRamUsedMB / 2048) * 100)"
+                      :style="{ width: ((totalRamUsedMB / 2048) * 100).toFixed(1) + '%' }">
                     </div>
                   </div>
                 </div>
@@ -540,14 +539,14 @@
                   <div class="flex justify-between items-baseline mb-1.5 text-xs">
                     <span class="text-[#8e8e93]">Disk Consumption</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ totalDiskUsedGB.toFixed(1) }} GB <span class="text-[#636366] font-normal">/ 90 GB</span>
+                      {{ totalDiskUsedGB.toFixed(1) }} GB <span class="text-[#636366] font-normal">/ 128 GB</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
                     <div 
                       class="h-full rounded-full transition-all duration-500" 
-                      :class="getMetricColor((totalDiskUsedGB / 90) * 100)"
-                      :style="{ width: ((totalDiskUsedGB / 90) * 100).toFixed(1) + '%' }">
+                      :class="getMetricColor((totalDiskUsedGB / 128) * 100)"
+                      :style="{ width: ((totalDiskUsedGB / 128) * 100).toFixed(1) + '%' }">
                     </div>
                   </div>
                 </div>
@@ -565,7 +564,7 @@
               <!-- Cloudflare Tunnel Route Health List -->
               <div class="space-y-2 pt-3 border-t border-white/[0.06]">
                 <span class="text-[11px] font-medium text-[#8e8e93] uppercase tracking-wider block mb-1">Tunnel Routes</span>
-                
+
                 <div v-for="srv in servers" :key="srv.id" class="flex items-center justify-between text-xs py-1.5 px-3 rounded-[10px] bg-[#1c1c1e] border border-white/[0.04]">
                   <div class="flex items-center gap-2 truncate">
                     <span class="w-1.5 h-1.5 rounded-full bg-[#30d158]"></span>
@@ -579,8 +578,8 @@
 
         </div>
 
-        <!-- Bento Row 2: 3 VPS Node Cards (Apple Squircles & Capsule Gauges) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Bento Row 2: 2 VPS Node Cards (Apple Squircles & Capsule Gauges) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div 
             v-for="(srv, idx) in servers" 
             :key="srv.id"
@@ -2014,7 +2013,6 @@
           labels: ['-33s', '-30s', '-27s', '-24s', '-21s', '-18s', '-15s', '-12s', '-9s', '-6s', '-3s', 'Now'],
           vps1: [2.0, 2.1, 1.9, 2.2, 2.0, 2.3, 2.1, 2.0, 2.2, 2.1, 2.0, 2.0],
           vps2: [1.3, 1.4, 1.5, 1.3, 1.6, 1.4, 1.3, 1.5, 1.4, 1.3, 1.4, 1.4],
-          vps3: [0.6, 0.7, 0.6, 0.8, 0.7, 0.6, 0.7, 0.6, 0.8, 0.7, 0.6, 0.6],
           rx: [1.2, 1.3, 1.1, 1.4, 1.2, 1.3, 1.2, 1.4, 1.3, 1.2, 1.3, 1.3],
           tx: [0.5, 0.6, 0.5, 0.7, 0.6, 0.5, 0.6, 0.5, 0.7, 0.6, 0.5, 0.5]
         });
@@ -2023,7 +2021,7 @@
         let pollTimer = null;
         let masterChartInstance = null;
 
-        // 3 Real VPS Nodes Data
+        // 2 Real VPS Nodes Data
         const servers = ref([
           {
             id: 'vps1',
@@ -2037,7 +2035,7 @@
             pingMs: 14,
             cpu_percent: 2.8,
             memory: { total: 1073741824, used: 260000000, free: 813741824, percent: 24.2 },
-            disk: { total: 32212254720, used: 12500000000, free: 19712254720, percent: 38.8 },
+            disk: { total: 68719476736, used: 16000000000, free: 52719476736, percent: 23.3 },
             network: { bytes_recv: 3450000000, bytes_sent: 1250000000, speed_rx_bps: 1450000, speed_tx_bps: 480000 }
           },
           {
@@ -2052,23 +2050,8 @@
             pingMs: 9,
             cpu_percent: 1.4,
             memory: { total: 1073741824, used: 190000000, free: 883741824, percent: 17.6 },
-            disk: { total: 32212254720, used: 8400000000, free: 23812254720, percent: 26.0 },
+            disk: { total: 68719476736, used: 14000000000, free: 54719476736, percent: 20.4 },
             network: { bytes_recv: 2150000000, bytes_sent: 820000000, speed_rx_bps: 920000, speed_tx_bps: 230000 }
-          },
-          {
-            id: 'vps3',
-            name: 'Debian',
-            os: 'linux',
-            ip: '172.197.200.15',
-            location: 'Malaysia West',
-            tunnel_url: 'https://vps3.hoangngocbach.id.vn',
-            boot_time: 1788622547,
-            is_online: true,
-            pingMs: 18,
-            cpu_percent: 0.9,
-            memory: { total: 1073741824, used: 145000000, free: 928741824, percent: 13.5 },
-            disk: { total: 32212254720, used: 5200000000, free: 27012254720, percent: 16.1 },
-            network: { bytes_recv: 980000000, bytes_sent: 410000000, speed_rx_bps: 340000, speed_tx_bps: 120000 }
           }
         ]);
 
@@ -2164,16 +2147,12 @@
 
               const s1 = servers.value.find(s => s.id === 'vps1') || servers.value[0];
               const s2 = servers.value.find(s => s.id === 'vps2') || servers.value[1];
-              const s3 = servers.value.find(s => s.id === 'vps3') || servers.value[2];
 
               liveHistory.value.vps1.push(s1 ? +s1.cpu_percent.toFixed(2) : 0);
               if (liveHistory.value.vps1.length > 12) liveHistory.value.vps1.shift();
 
               liveHistory.value.vps2.push(s2 ? +s2.cpu_percent.toFixed(2) : 0);
               if (liveHistory.value.vps2.length > 12) liveHistory.value.vps2.shift();
-
-              liveHistory.value.vps3.push(s3 ? +s3.cpu_percent.toFixed(2) : 0);
-              if (liveHistory.value.vps3.length > 12) liveHistory.value.vps3.shift();
 
               const rxVal = parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2));
               const txVal = parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2));
@@ -2212,7 +2191,6 @@
               let timeLabels = [];
               let vps1Data = [];
               let vps2Data = [];
-              let vps3Data = [];
               let rxData = [];
               let txData = [];
 
@@ -2220,7 +2198,6 @@
                 timeLabels = [...liveHistory.value.labels];
                 vps1Data = [...liveHistory.value.vps1];
                 vps2Data = [...liveHistory.value.vps2];
-                vps3Data = [...liveHistory.value.vps3];
                 rxData = [...liveHistory.value.rx];
                 txData = [...liveHistory.value.tx];
               } else {
@@ -2235,7 +2212,6 @@
 
                 const s1 = (servers.value || []).find(s => s && s.id === 'vps1');
                 const s2 = (servers.value || []).find(s => s && s.id === 'vps2');
-                const s3 = (servers.value || []).find(s => s && s.id === 'vps3');
 
                 vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
                   ? [...h.cpuSeries.vps1.slice(0, -1), s1 ? s1.cpu_percent : 0]
@@ -2244,10 +2220,6 @@
                 vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
                   ? [...h.cpuSeries.vps2.slice(0, -1), s2 ? s2.cpu_percent : 0]
                   : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, s2 ? s2.cpu_percent : 0];
-
-                vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
-                  ? [...h.cpuSeries.vps3.slice(0, -1), s3 ? s3.cpu_percent : 0]
-                  : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, s3 ? s3.cpu_percent : 0];
 
                 const curRxMb = parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2)) || 0;
                 const curTxMb = parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2)) || 0;
@@ -2277,18 +2249,6 @@
                   label: 'Ubuntu',
                   data: vps2Data,
                   borderColor: '#8e8e93',
-                  backgroundColor: 'transparent',
-                  fill: false,
-                  tension: 0.35,
-                  borderWidth: 1.8,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5
-                },
-                {
-                  label: 'Debian',
-                  data: vps3Data,
-                  borderColor: '#636366',
-                  borderDash: [4, 4],
                   backgroundColor: 'transparent',
                   fill: false,
                   tension: 0.35,
@@ -2333,7 +2293,7 @@
                     masterChartInstance.data.datasets[i].label = ds.label;
                   });
                   if (masterChartInstance.options && masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
-                    const maxCpu = Math.max(1, ...vps1Data, ...vps2Data, ...vps3Data);
+                    const maxCpu = Math.max(1, ...vps1Data, ...vps2Data);
                     const maxBw = Math.max(1, ...rxData, ...txData);
                     masterChartInstance.options.scales.y.suggestedMax = chartMode.value === 'cpu' 
                       ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(maxCpu * 1.5)) : 100)
@@ -2701,7 +2661,6 @@
         const expenses = ref([
           { id: 'exp-1', category: 'VPS', title: 'VPS 1 (Tokyo - Windows Server 2022)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-20', status: 'paid' },
           { id: 'exp-2', category: 'VPS', title: 'VPS 2 (Ubuntu 22.04 LTS)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-25', status: 'unpaid' },
-          { id: 'exp-3', category: 'VPS', title: 'VPS 3 (Debian 12 Worker)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-10-02', status: 'unpaid' },
           { id: 'exp-4', category: 'Domain', title: 'Domain hoangngocbach.id.vn', amount: 0, billingCycle: 'yearly', dueDate: '2027-09-01', status: 'paid' }
         ]);
 

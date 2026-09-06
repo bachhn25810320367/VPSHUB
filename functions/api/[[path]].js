@@ -47,29 +47,6 @@ const DEFAULT_SERVERS = [
       { name: "tailscaled", status: "Active", substate: "Running", cpu: 0.01, memory: 30.0, updated: "Now" },
       { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 3.5, updated: "Now" }
     ]
-  },
-  {
-    id: "vps3",
-    name: "Debian",
-    hostname: "debianvm",
-    os: "linux",
-    os_display: "Debian GNU/Linux 12 (bookworm)",
-    cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
-    ip: "172.197.200.15",
-    location: "Malaysia West",
-    tunnelUrl: "https://vps3.hoangngocbach.id.vn",
-    boot_time: 1788622547,
-    uptime_seconds: 72700,
-    containers: [
-      { name: "wg-easy", cpu: 0.03, memory: 18.4, network: "0.00 B/s", health: "Healthy", ports: "51820, 51821", image: "ghcr.io/wg-easy/wg-easy", status: "Up 6 hours", updated: "Now" }
-    ],
-    services: [
-      { name: "vps-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 2.4, updated: "Now" },
-      { name: "cloudreve-slave", status: "Active", substate: "Running", cpu: 0.01, memory: 13.1, updated: "Now" },
-      { name: "cloudflared", status: "Active", substate: "Running", cpu: 0.04, memory: 25.5, updated: "Now" },
-      { name: "docker", status: "Active", substate: "Running", cpu: 0.02, memory: 71.7, updated: "Now" },
-      { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 3.2, updated: "Now" }
-    ]
   }
 ];
 
@@ -422,8 +399,7 @@ export async function onRequest(context) {
       labels,
       cpuSeries: {
         vps1: [2.1, 2.5, 4.2, 3.1, 2.7, 3.2, 3.5],
-        vps2: [1.2, 1.4, 1.8, 1.9, 1.3, 1.6, 1.5],
-        vps3: [0.7, 0.8, 1.0, 0.7, 0.9, 0.8, 0.9]
+        vps2: [1.2, 1.4, 1.8, 1.9, 1.3, 1.6, 1.5]
       },
       bandwidthSeries: {
         rx: [1.2, 1.5, 2.1, 1.8, 1.6, 2.0, 2.4],
@@ -491,21 +467,11 @@ export async function onRequest(context) {
         {
           id: "exp-2",
           category: "VPS",
-          title: "VPS 2 (Ubuntu Beszel Hub)",
+          title: "VPS 2 (Ubuntu 22.04 LTS)",
           amount: 140000,
           currency: "VND",
           billingCycle: "monthly",
           dueDate: "2026-09-25",
-          status: "unpaid"
-        },
-        {
-          id: "exp-3",
-          category: "VPS",
-          title: "VPS 3 (Debian 12 Worker)",
-          amount: 140000,
-          currency: "VND",
-          billingCycle: "monthly",
-          dueDate: "2026-10-02",
           status: "unpaid"
         },
         {
