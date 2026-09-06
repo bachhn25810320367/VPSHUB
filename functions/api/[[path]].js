@@ -667,6 +667,9 @@ export async function onRequest(context) {
     if (range) fwd.set("Range", range);
     try {
       const r = await fetch(agentUrl, { method: "GET", headers: fwd });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
       const h = new Headers(r.headers);
       h.set("Access-Control-Allow-Origin", "*");
       const isDl = url.searchParams.get("download") === "1";

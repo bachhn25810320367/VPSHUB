@@ -595,8 +595,6 @@
                     <i v-if="srv.id === 'vps1' || srv.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] text-base"></i>
                     <!-- Ubuntu -->
                     <i v-else-if="srv.id === 'vps2' || (srv.name && srv.name.toLowerCase().includes('ubuntu'))" class="fa-brands fa-ubuntu text-[#e95420] text-lg"></i>
-                    <!-- Debian (Real Debian Swirl Icon) -->
-                    <i v-else-if="srv.id === 'vps3' || (srv.name && srv.name.toLowerCase().includes('debian'))" class="fa-brands fa-debian text-[#d70a53] text-xl"></i>
                     <i v-else class="fa-brands fa-linux text-[#ff9f0a] text-base"></i>
                   </div>
                   <div>
@@ -985,7 +983,6 @@
             <span>
               <i v-if="activeServerModal.id === 'vps1' || activeServerModal.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] mr-1.5"></i>
               <i v-else-if="activeServerModal.id === 'vps2' || (activeServerModal.name && activeServerModal.name.toLowerCase().includes('ubuntu'))" class="fa-brands fa-ubuntu text-[#e95420] mr-1.5"></i>
-              <i v-else-if="activeServerModal.id === 'vps3' || (activeServerModal.name && activeServerModal.name.toLowerCase().includes('debian'))" class="fa-brands fa-debian text-[#d70a53] mr-1.5"></i>
               <i v-else class="fa-brands fa-linux text-[#ff9f0a] mr-1.5"></i>
               {{ activeServerModal.os_display || activeServerModal.os }}
             </span>
