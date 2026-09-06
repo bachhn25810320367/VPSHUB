@@ -147,6 +147,31 @@ async function cosmosCreateItem(env, containerId, document, partitionKey) {
   return res.ok;
 }
 
+async function cosmosUpsertItem(env, containerId, document, partitionKey) {
+  const endpoint = env.COSMOS_ENDPOINT || "https://cosmos-vps-hub-prod.documents.azure.com:443/";
+  const key = env.COSMOS_KEY || "";
+  if (!key) return false;
+
+  const dateStr = new Date().toUTCString();
+  const resourceId = `dbs/vps_hub/colls/${containerId}/docs/${document.id}`;
+  const auth = await getCosmosAuthHeader("PUT", "docs", resourceId, key, dateStr);
+
+  const headers = {
+    "Authorization": auth,
+    "x-ms-date": dateStr,
+    "x-ms-version": "2018-12-31",
+    "x-ms-documentdb-partitionkey": JSON.stringify([partitionKey]),
+    "Content-Type": "application/json"
+  };
+
+  const res = await fetch(`${endpoint}${resourceId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(document)
+  });
+  return res.ok;
+}
+
 async function cosmosDeleteItem(env, containerId, documentId, partitionKey) {
   const endpoint = env.COSMOS_ENDPOINT || "https://cosmos-vps-hub-prod.documents.azure.com:443/";
   const key = env.COSMOS_KEY || "";
@@ -199,6 +224,113 @@ export async function onRequest(context) {
         "Access-Control-Allow-Headers": "Content-Type, X-Agent-Secret, Authorization"
       }
     });
+  }
+
+  // 0. Authentication Endpoints (Stored in Azure Cosmos DB)
+  if (path === "/api/auth/login" && method === "POST") {
+    try {
+      const body = await request.json();
+      const username = (body.username || "").trim().toLowerCase();
+      const password = body.password || "";
+
+      if (!username || !password) {
+        return jsonResponse({ error: "Vui lòng nhập tài khoản và mật khẩu" }, 400);
+      }
+
+      const users = await cosmosQuery(
+        env,
+        "expenses",
+        "SELECT * FROM c WHERE c.category = 'auth_user'",
+        [],
+        "auth_user"
+      );
+
+      const user = users.find(u => 
+        (u.username && u.username.toLowerCase() === username) || 
+        (u.aliases && u.aliases.map(a => a.toLowerCase()).includes(username))
+      );
+
+      if (!user) {
+        return jsonResponse({ error: "Tài khoản không tồn tại trên hệ thống" }, 401);
+      }
+
+      // Hash with user's salt using Web Crypto SHA-256
+      const enc = new TextEncoder();
+      const dataToHash = enc.encode(`${password}:${user.salt}`);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", dataToHash);
+      const computedHash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (computedHash !== user.password_hash) {
+        return jsonResponse({ error: "Mật khẩu không chính xác" }, 401);
+      }
+
+      const token = `vpshub_token_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      return jsonResponse({
+        success: true,
+        token,
+        username: user.username,
+        role: user.role || "owner"
+      });
+    } catch (e) {
+      return jsonResponse({ error: "Lỗi xử lý đăng nhập: " + e.message }, 500);
+    }
+  }
+
+  if (path === "/api/auth/change-password" && method === "POST") {
+    try {
+      const body = await request.json();
+      const username = (body.username || "").trim().toLowerCase();
+      const oldPassword = body.oldPassword || "";
+      const newPassword = body.newPassword || "";
+
+      if (!username || !oldPassword || !newPassword) {
+        return jsonResponse({ error: "Vui lòng nhập đầy đủ thông tin" }, 400);
+      }
+
+      if (newPassword.length < 6) {
+        return jsonResponse({ error: "Mật khẩu mới phải có ít nhất 6 ký tự" }, 400);
+      }
+
+      const users = await cosmosQuery(
+        env,
+        "expenses",
+        "SELECT * FROM c WHERE c.category = 'auth_user'",
+        [],
+        "auth_user"
+      );
+
+      const user = users.find(u => 
+        (u.username && u.username.toLowerCase() === username) || 
+        (u.aliases && u.aliases.map(a => a.toLowerCase()).includes(username))
+      );
+
+      if (!user) {
+        return jsonResponse({ error: "Không tìm thấy người dùng" }, 404);
+      }
+
+      const enc = new TextEncoder();
+      const oldHashBuf = await crypto.subtle.digest("SHA-256", enc.encode(`${oldPassword}:${user.salt}`));
+      const oldHash = Array.from(new Uint8Array(oldHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+      if (oldHash !== user.password_hash) {
+        return jsonResponse({ error: "Mật khẩu hiện tại không đúng" }, 401);
+      }
+
+      const newSalt = `salt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const newHashBuf = await crypto.subtle.digest("SHA-256", enc.encode(`${newPassword}:${newSalt}`));
+      const newHash = Array.from(new Uint8Array(newHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+      user.salt = newSalt;
+      user.password_hash = newHash;
+      user.updated_at = new Date().toISOString();
+
+      await cosmosUpsertItem(env, "expenses", user, "auth_user");
+      return jsonResponse({ success: true, message: "Mật khẩu đã được cập nhật thành công trên Azure Cosmos DB!" });
+    } catch (e) {
+      return jsonResponse({ error: "Lỗi đổi mật khẩu: " + e.message }, 500);
+    }
   }
 
   // 1. GET /api/telemetry/latest
@@ -319,7 +451,7 @@ export async function onRequest(context) {
   // 4. /api/expenses (CRUD)
   if (path === "/api/expenses") {
     if (method === "GET") {
-      const docs = await cosmosQuery(env, "expenses", "SELECT * FROM c ORDER BY c.dueDate ASC");
+      const docs = await cosmosQuery(env, "expenses", "SELECT * FROM c WHERE c.category != 'auth_user' ORDER BY c.dueDate ASC");
       const items = docs.length > 0 ? docs : [
         {
           id: "exp-1",
