@@ -1269,7 +1269,100 @@
           if (timeRange.value === 'Live') {
             timeLabels = [...rollingBuffer.labels];
             if (chartMode.value === 'ram') {
-            // RAM Load: Original Apple HIG Palette, ZERO Background Fill (Transparent pitch black OLED)
+              series1 = [...rollingBuffer.ramVps1];
+              series2 = [...rollingBuffer.ramVps2];
+              series3 = [...rollingBuffer.ramVps3];
+            } else {
+              series1 = [...rollingBuffer.cpuVps1];
+              series2 = [...rollingBuffer.cpuVps2];
+              series3 = [...rollingBuffer.cpuVps3];
+            }
+            rxData = [...rollingBuffer.rx];
+            txData = [...rollingBuffer.tx];
+          } else {
+            const h = chartHistory.value;
+            const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
+            timeLabels = (h && h.labels) ? h.labels : baseline.labels;
+
+            if (chartMode.value === 'ram') {
+              const liveRam1 = Number(servers.value[0]?.memory?.percent || 95.2);
+              const liveRam2 = Number(servers.value[1]?.memory?.percent || 53.3);
+              const liveRam3 = Number(servers.value[2]?.memory?.percent || 47.9);
+
+              series1 = (h && h.ramSeries && h.ramSeries.vps1)
+                ? [...h.ramSeries.vps1.slice(0, -1), liveRam1]
+                : [...baseline.ram.vps1, liveRam1];
+              series2 = (h && h.ramSeries && h.ramSeries.vps2)
+                ? [...h.ramSeries.vps2.slice(0, -1), liveRam2]
+                : [...baseline.ram.vps2, liveRam2];
+              series3 = (h && h.ramSeries && h.ramSeries.vps3)
+                ? [...h.ramSeries.vps3.slice(0, -1), liveRam3]
+                : [...baseline.ram.vps3, liveRam3];
+            } else {
+              const liveCpu1 = Number(servers.value[0]?.cpu_percent || 1.5);
+              const liveCpu2 = Number(servers.value[1]?.cpu_percent || 0.3);
+              const liveCpu3 = Number(servers.value[2]?.cpu_percent || 0.5);
+
+              series1 = (h && h.cpuSeries && h.cpuSeries.vps1)
+                ? [...h.cpuSeries.vps1.slice(0, -1), liveCpu1]
+                : [...baseline.cpu.vps1, liveCpu1];
+              series2 = (h && h.cpuSeries && h.cpuSeries.vps2)
+                ? [...h.cpuSeries.vps2.slice(0, -1), liveCpu2]
+                : [...baseline.cpu.vps2, liveCpu2];
+              series3 = (h && h.cpuSeries && h.cpuSeries.vps3)
+                ? [...h.cpuSeries.vps3.slice(0, -1), liveCpu3]
+                : [...baseline.cpu.vps3, liveCpu3];
+            }
+
+            const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
+            const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
+
+            rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+              ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
+              : [...baseline.rx, currentRxMbps];
+
+            txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+              ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
+              : [...baseline.tx, currentTxMbps];
+          }
+
+          // Auto-Scale Calculations
+          let targetYMax = 100;
+          if (chartMode.value === 'ram') {
+            targetYMax = 100;
+          } else if (chartMode.value === 'cpu') {
+            const allCpuVals = [...series1, ...series2, ...series3];
+            const peakVal = Math.max(...allCpuVals, 0.5);
+            if (peakVal <= 2.5) {
+              targetYMax = 3;
+            } else if (peakVal <= 6) {
+              targetYMax = 8;
+            } else if (peakVal <= 18) {
+              targetYMax = 25;
+            } else if (peakVal <= 45) {
+              targetYMax = 50;
+            } else {
+              targetYMax = 100;
+            }
+          } else {
+            const allBwVals = [...rxData, ...txData];
+            const peakBw = Math.max(...allBwVals, 0.2);
+            if (peakBw <= 2.5) {
+              targetYMax = 3;
+            } else if (peakBw <= 6) {
+              targetYMax = 8;
+            } else if (peakBw <= 15) {
+              targetYMax = 20;
+            } else {
+              targetYMax = Math.ceil(peakBw * 1.3);
+            }
+          }
+          currentYScaleMax.value = targetYMax;
+
+          masterChartInstance.data.labels = timeLabels;
+
+          if (chartMode.value === 'ram' || chartMode.value === 'cpu') {
+            // Original Apple monochrome palette, transparent OLED background (NO red background fill!)
             masterChartInstance.data.datasets = [
               {
                 label: 'vps 1 (Window Server)',
@@ -1306,46 +1399,8 @@
                 pointHoverRadius: 6
               }
             ];
-          } else if (chartMode.value === 'cpu') {
-            // CPU Load: Original Apple HIG Palette, ZERO Background Fill
-            masterChartInstance.data.datasets = [
-              {
-                label: 'vps 1 (Window Server)',
-                data: series1,
-                borderColor: '#0a84ff',
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'vps2 (Ubuntu)',
-                data: series2,
-                borderColor: '#8e8e93',
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 1.8,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'vps3 (Debian)',
-                data: series3,
-                borderColor: '#636366',
-                borderDash: [4, 4],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 1.8,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
-                pointHoverRadius: 6
-              }
-            ];
           } else {
-            // Bandwidth: ZERO Background Fill
+            // Bandwidth
             masterChartInstance.data.datasets = [
               {
                 label: 'Inbound RX (Combined)',
