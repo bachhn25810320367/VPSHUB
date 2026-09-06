@@ -5,9 +5,9 @@
  */
 
 const DEFAULT_SERVERS = [
-  { id: "vps1", name: "VPS 1 (Tokyo Win 2022)", os: "windows", ip: "20.44.176.166", location: "Tokyo, JP", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
-  { id: "vps2", name: "VPS 2 (Ubuntu Beszel Hub)", os: "linux", ip: "20.89.130.95", location: "East Asia", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
-  { id: "vps3", name: "VPS 3 (Debian 12 Worker)", os: "linux", ip: "172.197.200.15", location: "Malaysia West", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
+  { id: "vps1", name: "WindowServer", os: "windows", ip: "20.44.176.166", location: "Tokyo, JP", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
+  { id: "vps2", name: "Ubuntu", os: "linux", ip: "20.89.130.95", location: "East Asia", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
+  { id: "vps3", name: "Debian", os: "linux", ip: "172.197.200.15", location: "Malaysia West", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
 ];
 
 async function getCosmosAuthHeader(verb, resourceType, resourceId, keyBase64, dateStr) {
@@ -179,6 +179,7 @@ export async function onRequest(context) {
 
       result.push({
         ...latest,
+        name: srv.name,
         ip: srv.ip,
         location: srv.location,
         is_online: isOnline,

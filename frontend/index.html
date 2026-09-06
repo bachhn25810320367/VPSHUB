@@ -256,21 +256,18 @@
             <!-- Header with Metric Toggles, Series Legend and Timescale -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
               <div>
-                <div class="flex items-center gap-3">
-                  <div class="w-2 h-2 rounded-full bg-[#0a84ff]"></div>
-                  <div>
-                    <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
-                    <p class="text-xs text-[#8e8e93]">Live multi-node metrics via Cloudflare gRPC Tunnels</p>
-                  </div>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-2 h-2 rounded-full bg-[#0a84ff] animate-pulse"></div>
+                  <h2 class="text-base font-semibold tracking-display text-white">Stream</h2>
                 </div>
 
                 <!-- Apple Style Series Legend -->
-                <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> VPS 1 (Tokyo)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> VPS 2 (Ubuntu)</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> VPS 3 (Debian)</span>
+                <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> WindowServer</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> Ubuntu</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> Debian</span>
                 </div>
-                <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
+                <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] border-b border-dashed border-[#8e8e93] inline-block"></span> Outbound TX</span>
                 </div>
@@ -927,7 +924,7 @@
         const servers = ref([
           {
             id: 'vps1',
-            name: 'VPS 1 (Tokyo Win 2022)',
+            name: 'WindowServer',
             os: 'windows',
             ip: '20.44.176.166',
             location: 'Tokyo, JP',
@@ -941,7 +938,7 @@
           },
           {
             id: 'vps2',
-            name: 'VPS 2 (Ubuntu Beszel Hub)',
+            name: 'Ubuntu',
             os: 'linux',
             ip: '20.89.130.95',
             location: 'East Asia',
@@ -955,7 +952,7 @@
           },
           {
             id: 'vps3',
-            name: 'VPS 3 (Debian 12 Worker)',
+            name: 'Debian',
             os: 'linux',
             ip: '172.197.200.15',
             location: 'Malaysia West',
@@ -1158,7 +1155,7 @@
 
               const datasets = chartMode.value === 'cpu' ? [
                 {
-                  label: 'VPS 1 (Tokyo Win 2022)',
+                  label: 'WindowServer',
                   data: vps1Data,
                   borderColor: '#0a84ff',
                   backgroundColor: 'rgba(10, 132, 255, 0.08)',
@@ -1169,7 +1166,7 @@
                   pointHoverRadius: 5
                 },
                 {
-                  label: 'VPS 2 (Ubuntu Beszel)',
+                  label: 'Ubuntu',
                   data: vps2Data,
                   borderColor: '#8e8e93',
                   backgroundColor: 'transparent',
@@ -1180,7 +1177,7 @@
                   pointHoverRadius: 5
                 },
                 {
-                  label: 'VPS 3 (Debian Worker)',
+                  label: 'Debian',
                   data: vps3Data,
                   borderColor: '#636366',
                   borderDash: [4, 4],
