@@ -21,7 +21,6 @@ const DEFAULT_SERVERS = [
     services: [
       { name: "VPSHub-Agent", status: "Active", substate: "Running", cpu: 0.05, memory: 5.1, updated: "Now" },
       { name: "cloudreve", status: "Active", substate: "Running", cpu: 0.01, memory: 14.2, updated: "Now" },
-      { name: "beszel-agent", status: "Active", substate: "Running", cpu: 0.02, memory: 12.8, updated: "Now" },
       { name: "9router (Node.js)", status: "Active", substate: "Running", cpu: 0.08, memory: 78.5, updated: "Now" },
       { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 4.8, updated: "Now" }
     ]
@@ -39,9 +38,7 @@ const DEFAULT_SERVERS = [
     boot_time: 1788615670,
     uptime_seconds: 79600,
     containers: [
-      { name: "cloudreve", cpu: 0.02, memory: 74.2, network: "4.2 KB/s", health: "Healthy", ports: "5212", image: "cloudreve/cloudreve:latest", status: "Up 18 hours", updated: "Now" },
-      { name: "beszel", cpu: 0.01, memory: 31.0, network: "1.1 KB/s", health: "Healthy", ports: "8080", image: "henrygd/beszel:latest", status: "Up 21 hours", updated: "Now" },
-      { name: "beszel-agent", cpu: 0.01, memory: 15.6, network: "0.2 KB/s", health: "Healthy", ports: "45876", image: "henrygd/beszel-agent:latest", status: "Up 21 hours", updated: "Now" }
+      { name: "cloudreve", cpu: 0.02, memory: 44.2, network: "994 KB", health: "Healthy", ports: "5212", image: "cloudreve/cloudreve:latest", status: "Up 20 hours", updated: "Now" }
     ],
     services: [
       { name: "vps-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 0.9, updated: "Now" },
@@ -69,7 +66,6 @@ const DEFAULT_SERVERS = [
     services: [
       { name: "vps-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 2.4, updated: "Now" },
       { name: "cloudreve-slave", status: "Active", substate: "Running", cpu: 0.01, memory: 13.1, updated: "Now" },
-      { name: "beszel-agent", status: "Active", substate: "Running", cpu: 0.01, memory: 15.8, updated: "Now" },
       { name: "cloudflared", status: "Active", substate: "Running", cpu: 0.04, memory: 25.5, updated: "Now" },
       { name: "docker", status: "Active", substate: "Running", cpu: 0.02, memory: 71.7, updated: "Now" },
       { name: "sshd", status: "Active", substate: "Running", cpu: 0.01, memory: 3.2, updated: "Now" }
