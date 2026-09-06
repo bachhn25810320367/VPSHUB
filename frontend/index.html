@@ -218,7 +218,8 @@
               v-model="pollIntervalSec" 
               @change="updatePollingSchedule"
               class="bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] text-[11px] rounded-full px-3 py-1.5 border border-white/10 outline-none cursor-pointer appearance-none pr-6 text-center font-medium transition-colors">
-              <option :value="3" class="bg-[#1c1c1e] text-white">3s sync</option>
+              <option :value="1" class="bg-[#1c1c1e] text-white">1s Realtime</option>
+              <option :value="2" class="bg-[#1c1c1e] text-white">2s Live</option>
               <option :value="5" class="bg-[#1c1c1e] text-white">5s sync</option>
               <option :value="15" class="bg-[#1c1c1e] text-white">15s sync</option>
               <option :value="0" class="bg-[#1c1c1e] text-white">Paused</option>
@@ -280,13 +281,13 @@
                 <!-- Apple Segmented Toggle: CPU vs Bandwidth -->
                 <div class="inline-flex bg-[#1c1c1e] rounded-[9px] p-0.5 border border-white/10 shadow-inner">
                   <button 
-                    @click="chartMode = 'cpu'; renderCharts()"
+                    @click="setChartMode('cpu')"
                     :class="chartMode === 'cpu' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
                     class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
                     CPU Load
                   </button>
                   <button 
-                    @click="chartMode = 'network'; renderCharts()"
+                    @click="setChartMode('network')"
                     :class="chartMode === 'network' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
                     class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
                     Bandwidth
@@ -910,7 +911,7 @@
         const chartMode = ref('cpu');       // 'cpu' or 'network'
         const timeRange = ref('1h');
         const isRefreshing = ref(false);
-        const pollIntervalSec = ref(5);
+        const pollIntervalSec = ref(1); // Realtime 1s default
         let pollTimer = null;
         let masterChartInstance = null;
 
@@ -991,6 +992,44 @@
           loadFilesForSelectedServer();
         }
 
+        // =====================================================================
+        // Distinct Time-Range Historical Baselines (1h, 6h, 24h, 7d)
+        // =====================================================================
+        const timeRangeBaselines = {
+          '1h': {
+            labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
+            vps1: [2.1, 2.7, 4.4, 3.2, 2.6, 3.1],
+            vps2: [1.3, 1.6, 1.9, 1.7, 1.4, 1.6],
+            vps3: [0.6, 0.8, 0.7, 0.6, 0.7, 0.6],
+            rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7],
+            tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7]
+          },
+          '6h': {
+            labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
+            vps1: [1.6, 2.1, 5.9, 4.4, 3.2, 2.8],
+            vps2: [1.0, 1.3, 3.2, 2.4, 1.8, 1.4],
+            vps3: [0.4, 0.5, 1.4, 0.9, 0.7, 0.6],
+            rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6],
+            tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6]
+          },
+          '24h': {
+            labels: ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'],
+            vps1: [0.9, 0.7, 2.2, 7.6, 5.5, 3.3],
+            vps2: [0.6, 0.5, 1.5, 4.9, 3.7, 2.0],
+            vps3: [0.3, 0.2, 0.8, 2.3, 1.6, 0.8],
+            rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5],
+            tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9]
+          },
+          '7d': {
+            labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'],
+            vps1: [4.9, 5.6, 5.2, 6.4, 4.6, 2.1],
+            vps2: [3.0, 3.4, 3.2, 3.9, 2.7, 1.3],
+            vps3: [1.3, 1.6, 1.4, 1.8, 1.2, 0.5],
+            rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6],
+            tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6]
+          }
+        };
+
         const chartHistory = ref(null);
 
         async function fetchChartHistory() {
@@ -1003,17 +1042,24 @@
               }
             }
           } catch (e) {
-            console.warn('API /api/telemetry/history not available, using baseline:', e);
+            // gracefully fallback to local timeRangeBaselines
           }
-          renderCharts();
+          applyChartData(true);
         }
 
         function setTimeRange(range) {
           timeRange.value = range;
+          chartHistory.value = null; // reset to immediate range baseline
+          applyChartData(true);
           fetchChartHistory();
         }
 
-        // Polling Schedule Controller
+        function setChartMode(mode) {
+          chartMode.value = mode;
+          applyChartData(true);
+        }
+
+        // Polling Schedule Controller (Realtime 1s default)
         function updatePollingSchedule() {
           if (pollTimer) clearInterval(pollTimer);
           if (pollIntervalSec.value > 0) {
@@ -1025,27 +1071,50 @@
           }
         }
 
-        // Telemetry Data Ingestion
+        // Live Metric Generation & Ingestion
         async function fetchMetrics() {
           isRefreshing.value = true;
+          let fetchedFromServer = false;
           try {
             const res = await fetch('/api/telemetry/latest');
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) {
                 servers.value = data;
+                fetchedFromServer = true;
               }
             }
           } catch (e) {
-            servers.value.forEach(s => {
-              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(1)));
-              s.network.speed_rx_bps = Math.max(50000, Math.round(s.network.speed_rx_bps * (1 + (Math.random() * 0.2 - 0.1))));
-              s.network.speed_tx_bps = Math.max(20000, Math.round(s.network.speed_tx_bps * (1 + (Math.random() * 0.2 - 0.1))));
-            });
-          } finally {
-            isRefreshing.value = false;
-            renderCharts();
+            // Offline / static file mode: generate organic real-time jitter
           }
+
+          if (!fetchedFromServer) {
+            // Simulate realistic, silky smooth real-time telemetry fluctuations
+            servers.value.forEach(s => {
+              // Natural CPU micro-drift (-0.3% to +0.3%)
+              s.cpu_percent = Math.max(0.4, Math.min(98.5, +(s.cpu_percent + (Math.random() * 0.6 - 0.3)).toFixed(1)));
+              
+              // Memory micro-drift (+- 2MB)
+              const ramDrift = Math.floor(Math.random() * 5) - 2;
+              s.memory.used = Math.max(100*1024*1024, Math.min(s.memory.total, s.memory.used + ramDrift * 1024 * 1024));
+              s.memory.percent = +((s.memory.used / s.memory.total) * 100).toFixed(1);
+
+              // Network RX/TX speed jitter
+              const rxJitter = 1 + (Math.random() * 0.16 - 0.08);
+              const txJitter = 1 + (Math.random() * 0.16 - 0.08);
+              s.network.speed_rx_bps = Math.max(75000, Math.round(s.network.speed_rx_bps * rxJitter));
+              s.network.speed_tx_bps = Math.max(30000, Math.round(s.network.speed_tx_bps * txJitter));
+
+              // Ping jitter (1ms)
+              if (Math.random() > 0.6) {
+                s.pingMs = Math.max(4, s.pingMs + (Math.floor(Math.random() * 3) - 1));
+              }
+            });
+          }
+
+          isRefreshing.value = false;
+          // Smooth 60fps real-time chart update (WITHOUT recreating canvas!)
+          applyChartData(false);
         }
 
         function simulateOrFetchMetrics() {
@@ -1054,114 +1123,136 @@
 
         function refreshData() {
           fetchMetrics();
+          fetchChartHistory();
           if (activeTab.value === 'storage') loadFilesForSelectedServer();
           if (activeTab.value === 'expenses') fetchExpenses();
         }
 
-        // Master Chart Rendering (Apple Health / Activity / Instruments Graph Style)
+        // Apply Chart Data with Option for Full Transition or Instant Realtime Tick
+        function applyChartData(withTransition = true) {
+          if (!masterChartInstance) {
+            renderCharts();
+            return;
+          }
+
+          const h = chartHistory.value;
+          const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
+          const timeLabels = (h && h.labels) ? h.labels : baseline.labels;
+
+          const vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
+            ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
+            : [...baseline.vps1, servers.value[0].cpu_percent];
+
+          const vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
+            ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
+            : [...baseline.vps2, servers.value[1].cpu_percent];
+
+          const vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
+            ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
+            : [...baseline.vps3, servers.value[2].cpu_percent];
+
+          const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
+          const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
+
+          const rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+            ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
+            : [...baseline.rx, currentRxMbps];
+
+          const txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+            ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
+            : [...baseline.tx, currentTxMbps];
+
+          masterChartInstance.data.labels = timeLabels;
+
+          if (chartMode.value === 'cpu') {
+            masterChartInstance.data.datasets = [
+              {
+                label: 'VPS 1 (Tokyo Win 2022)',
+                data: vps1Data,
+                borderColor: '#0a84ff',
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'VPS 2 (Ubuntu Beszel)',
+                data: vps2Data,
+                borderColor: '#8e8e93',
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.35,
+                borderWidth: 1.8,
+                pointRadius: 3,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'VPS 3 (Debian Worker)',
+                data: vps3Data,
+                borderColor: '#636366',
+                borderDash: [4, 4],
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.35,
+                borderWidth: 1.8,
+                pointRadius: 3,
+                pointHoverRadius: 6
+              }
+            ];
+          } else {
+            masterChartInstance.data.datasets = [
+              {
+                label: 'Inbound RX (Combined)',
+                data: rxData,
+                borderColor: '#0a84ff',
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'Outbound TX (Combined)',
+                data: txData,
+                borderColor: '#8e8e93',
+                borderDash: [3, 3],
+                fill: false,
+                tension: 0.35,
+                borderWidth: 1.8,
+                pointRadius: 3,
+                pointHoverRadius: 6
+              }
+            ];
+          }
+
+          if (withTransition) {
+            masterChartInstance.update();
+          } else {
+            masterChartInstance.update('none'); // Silky 60fps realtime tick without animation lag
+          }
+        }
+
+        // Master Chart Initialization
         function renderCharts() {
           nextTick(() => {
             const ctx = document.getElementById('masterTelemetryChart');
             if (!ctx) return;
 
-            const h = chartHistory.value;
-            const timeLabels = (h && h.labels) ? h.labels : (timeRange.value === '1h'
-              ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
-              : timeRange.value === '6h'
-              ? ['6h', '5h', '4h', '3h', '2h', '1h', 'Now']
-              : timeRange.value === '24h'
-              ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
-              : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now']);
-
-            const vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
-              ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
-              : [1.9, 2.3, 4.1, 3.0, 2.4, 2.7, servers.value[0].cpu_percent];
-
-            const vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
-              ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
-              : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, servers.value[1].cpu_percent];
-
-            const vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
-              ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
-              : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, servers.value[2].cpu_percent];
-
-            const rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
-              ? [...h.bandwidthSeries.rx.slice(0, -1), parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))]
-              : [0.9, 1.3, 1.6, 1.2, 1.4, 1.3, parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))];
-
-            const txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
-              ? [...h.bandwidthSeries.tx.slice(0, -1), parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))]
-              : [0.4, 0.5, 0.7, 0.6, 0.4, 0.5, parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))];
-
-            const datasets = chartMode.value === 'cpu' ? [
-              {
-                label: 'VPS 1 (Tokyo Win 2022)',
-                data: vps1Data,
-                borderColor: '#0a84ff', // Apple System Blue
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 2,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'VPS 2 (Ubuntu Beszel)',
-                data: vps2Data,
-                borderColor: '#8e8e93', // Apple System Gray 1
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'VPS 3 (Debian Worker)',
-                data: vps3Data,
-                borderColor: '#636366', // Apple System Gray 2 Dashed
-                borderDash: [4, 4],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              }
-            ] : [
-              {
-                label: 'Inbound RX (Combined)',
-                data: rxData,
-                borderColor: '#0a84ff', // Apple System Blue
-                backgroundColor: 'rgba(10, 132, 255, 0.08)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 2,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              },
-              {
-                label: 'Outbound TX (Combined)',
-                data: txData,
-                borderColor: '#8e8e93', // Apple System Gray 1 Dashed
-                borderDash: [3, 3],
-                fill: false,
-                tension: 0.4,
-                borderWidth: 1.8,
-                pointRadius: 2.5,
-                pointHoverRadius: 5
-              }
-            ];
-
-            if (masterChartInstance) masterChartInstance.destroy();
+            if (masterChartInstance) {
+              applyChartData(true);
+              return;
+            }
 
             masterChartInstance = new Chart(ctx, {
               type: 'line',
-              data: { labels: timeLabels, datasets },
+              data: { labels: [], datasets: [] },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 300 },
+                animation: { duration: 350 },
                 plugins: {
                   legend: { display: false },
                   tooltip: {
@@ -1477,6 +1568,7 @@
           chartMode,
           timeRange,
           setTimeRange,
+          setChartMode,
           isRefreshing,
           pollIntervalSec,
           updatePollingSchedule,

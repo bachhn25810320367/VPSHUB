@@ -181,26 +181,51 @@ const server = http.createServer(async (req, res) => {
   // --- API ROUTE: /api/telemetry/history ---
   if (pathname === '/api/telemetry/history' && method === 'GET') {
     const range = parsedUrl.query.range || '1h';
-    let labels = ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'];
-    if (range === '6h') labels = ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'];
-    if (range === '24h') labels = ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'];
-    if (range === '7d') labels = ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'];
+    const currentRxMbps = parseFloat((memoryStore.servers.reduce((a, b) => a + b.network.speed_rx_bps, 0) / (1024 * 1024)).toFixed(2));
+    const currentTxMbps = parseFloat((memoryStore.servers.reduce((a, b) => a + b.network.speed_tx_bps, 0) / (1024 * 1024)).toFixed(2));
 
-    const cpuSeries = {
-      vps1: [2.1, 2.5, 4.2, 3.1, 2.7, 3.2, memoryStore.servers[0].cpu_percent],
-      vps2: [1.2, 1.4, 1.8, 1.9, 1.3, 1.6, memoryStore.servers[1].cpu_percent],
-      vps3: [0.7, 0.8, 1.0, 0.7, 0.9, 0.8, memoryStore.servers[2].cpu_percent]
+    const rangeConfig = {
+      '1h': {
+        labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
+        vps1: [2.1, 2.7, 4.4, 3.2, 2.6, 3.1, memoryStore.servers[0].cpu_percent],
+        vps2: [1.3, 1.6, 1.9, 1.7, 1.4, 1.6, memoryStore.servers[1].cpu_percent],
+        vps3: [0.6, 0.8, 0.7, 0.6, 0.7, 0.6, memoryStore.servers[2].cpu_percent],
+        rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7, currentRxMbps],
+        tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7, currentTxMbps]
+      },
+      '6h': {
+        labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
+        vps1: [1.6, 2.1, 5.9, 4.4, 3.2, 2.8, memoryStore.servers[0].cpu_percent],
+        vps2: [1.0, 1.3, 3.2, 2.4, 1.8, 1.4, memoryStore.servers[1].cpu_percent],
+        vps3: [0.4, 0.5, 1.4, 0.9, 0.7, 0.6, memoryStore.servers[2].cpu_percent],
+        rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6, currentRxMbps],
+        tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6, currentTxMbps]
+      },
+      '24h': {
+        labels: ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'],
+        vps1: [0.9, 0.7, 2.2, 7.6, 5.5, 3.3, memoryStore.servers[0].cpu_percent],
+        vps2: [0.6, 0.5, 1.5, 4.9, 3.7, 2.0, memoryStore.servers[1].cpu_percent],
+        vps3: [0.3, 0.2, 0.8, 2.3, 1.6, 0.8, memoryStore.servers[2].cpu_percent],
+        rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5, currentRxMbps],
+        tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9, currentTxMbps]
+      },
+      '7d': {
+        labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'],
+        vps1: [4.9, 5.6, 5.2, 6.4, 4.6, 2.1, memoryStore.servers[0].cpu_percent],
+        vps2: [3.0, 3.4, 3.2, 3.9, 2.7, 1.3, memoryStore.servers[1].cpu_percent],
+        vps3: [1.3, 1.6, 1.4, 1.8, 1.2, 0.5, memoryStore.servers[2].cpu_percent],
+        rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6, currentRxMbps],
+        tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6, currentTxMbps]
+      }
     };
 
-    const totalRxMbps = (memoryStore.servers.reduce((a, b) => a + b.network.speed_rx_bps, 0) / (1024 * 1024)).toFixed(2);
-    const totalTxMbps = (memoryStore.servers.reduce((a, b) => a + b.network.speed_tx_bps, 0) / (1024 * 1024)).toFixed(2);
-
-    const bandwidthSeries = {
-      rx: [0.9, 1.2, 1.8, 1.5, 1.3, 1.6, parseFloat(totalRxMbps)],
-      tx: [0.4, 0.6, 0.8, 0.7, 0.5, 0.7, parseFloat(totalTxMbps)]
-    };
-
-    return sendJson(res, 200, { range, labels, cpuSeries, bandwidthSeries });
+    const sel = rangeConfig[range] || rangeConfig['1h'];
+    return sendJson(res, 200, {
+      range,
+      labels: sel.labels,
+      cpuSeries: { vps1: sel.vps1, vps2: sel.vps2, vps3: sel.vps3 },
+      bandwidthSeries: { rx: sel.rx, tx: sel.tx }
+    });
   }
 
   // --- API ROUTE: /api/telemetry (POST Agent Ingestion) ---
