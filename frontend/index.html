@@ -1585,6 +1585,7 @@
             ip: '20.44.176.166',
             location: 'Tokyo, JP',
             tunnel_url: 'https://vps1.hoangngocbach.id.vn',
+            boot_time: 1788535482,
             is_online: true,
             pingMs: 14,
             cpu_percent: 2.8,
@@ -1599,6 +1600,7 @@
             ip: '20.89.130.95',
             location: 'East Asia',
             tunnel_url: 'https://vps2.hoangngocbach.id.vn',
+            boot_time: 1788615670,
             is_online: true,
             pingMs: 9,
             cpu_percent: 1.4,
@@ -1613,6 +1615,7 @@
             ip: '172.197.200.15',
             location: 'Malaysia West',
             tunnel_url: 'https://vps3.hoangngocbach.id.vn',
+            boot_time: 1788622547,
             is_online: true,
             pingMs: 18,
             cpu_percent: 0.9,
@@ -2203,15 +2206,24 @@
           loadFilesForSelectedServer();
           updatePollingSchedule();
 
-          // Live Realtime 1-Second Uptime Ticker
+          // Live Realtime Uptime Calculator from Real Kernel Boot Time
           uptimeTicker = setInterval(() => {
+            const nowUnix = Math.floor(Date.now() / 1000);
             servers.value.forEach(srv => {
               if (srv.is_online) {
-                srv.uptime_seconds = (srv.uptime_seconds || 0) + 1;
+                if (srv.boot_time && srv.boot_time > 0) {
+                  srv.uptime_seconds = Math.max(0, nowUnix - srv.boot_time);
+                } else {
+                  srv.uptime_seconds = (srv.uptime_seconds || 0) + 1;
+                }
               }
             });
             if (activeServerModal.value && activeServerModal.value.is_online) {
-              activeServerModal.value.uptime_seconds = (activeServerModal.value.uptime_seconds || 0) + 1;
+              if (activeServerModal.value.boot_time && activeServerModal.value.boot_time > 0) {
+                activeServerModal.value.uptime_seconds = Math.max(0, nowUnix - activeServerModal.value.boot_time);
+              } else {
+                activeServerModal.value.uptime_seconds = (activeServerModal.value.uptime_seconds || 0) + 1;
+              }
             }
           }, 1000);
 

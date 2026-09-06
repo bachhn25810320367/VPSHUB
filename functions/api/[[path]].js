@@ -15,7 +15,8 @@ const DEFAULT_SERVERS = [
     ip: "20.44.176.166",
     location: "Tokyo, JP",
     tunnelUrl: "https://vps1.hoangngocbach.id.vn",
-    uptime_seconds: 158200,
+    boot_time: 1788535482,
+    uptime_seconds: 159800,
     containers: [],
     services: [
       { name: "VPSHub-Agent", status: "Active", substate: "Running", cpu: 0.05, memory: 5.1, updated: "Now" },
@@ -35,7 +36,8 @@ const DEFAULT_SERVERS = [
     ip: "20.89.130.95",
     location: "East Asia",
     tunnelUrl: "https://vps2.hoangngocbach.id.vn",
-    uptime_seconds: 77800,
+    boot_time: 1788615670,
+    uptime_seconds: 79600,
     containers: [
       { name: "cloudreve", cpu: 0.02, memory: 74.2, network: "4.2 KB/s", health: "Healthy", ports: "5212", image: "cloudreve/cloudreve:latest", status: "Up 18 hours", updated: "Now" },
       { name: "beszel", cpu: 0.01, memory: 31.0, network: "1.1 KB/s", health: "Healthy", ports: "8080", image: "henrygd/beszel:latest", status: "Up 21 hours", updated: "Now" },
@@ -59,7 +61,8 @@ const DEFAULT_SERVERS = [
     ip: "172.197.200.15",
     location: "Malaysia West",
     tunnelUrl: "https://vps3.hoangngocbach.id.vn",
-    uptime_seconds: 71100,
+    boot_time: 1788622547,
+    uptime_seconds: 72700,
     containers: [
       { name: "wg-easy", cpu: 0.03, memory: 18.4, network: "0.00 B/s", health: "Healthy", ports: "51820, 51821", image: "ghcr.io/wg-easy/wg-easy", status: "Up 6 hours", updated: "Now" }
     ],
@@ -373,6 +376,9 @@ export async function onRequest(context) {
         };
       }
 
+      const bootTime = (latest && latest.boot_time) ? latest.boot_time : srv.boot_time;
+      const uptimeSec = bootTime ? (nowSec - bootTime) : ((latest && latest.uptime) || srv.uptime_seconds);
+
       result.push({
         ...latest,
         name: srv.name,
@@ -383,7 +389,8 @@ export async function onRequest(context) {
         location: srv.location,
         is_online: isOnline,
         tunnel_url: srv.tunnelUrl,
-        uptime_seconds: (latest && typeof latest.uptime_seconds === 'number' && latest.uptime_seconds > 0) ? latest.uptime_seconds : srv.uptime_seconds,
+        boot_time: bootTime,
+        uptime_seconds: uptimeSec,
         containers: srv.containers,
         services: srv.services,
         last_seen_seconds_ago: nowSec - (latest.timestamp || nowSec),
