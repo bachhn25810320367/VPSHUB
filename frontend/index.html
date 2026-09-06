@@ -506,7 +506,7 @@
                 <div>
                   <div class="flex justify-between items-baseline mb-1.5 text-xs">
                     <span class="text-[#8e8e93]">Mean Cluster CPU</span>
-                    <span class="font-medium font-mono text-white tabular-nums">{{ averageClusterCpu.toFixed(1) }}%</span>
+                    <span class="font-medium font-mono text-white tabular-nums">{{ averageClusterCpu.toFixed(2) }}%</span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
                     <div 
@@ -529,7 +529,7 @@
                     <div 
                       class="h-full rounded-full transition-all duration-500" 
                       :class="getMetricColor((totalRamUsedMB / 2048) * 100)"
-                      :style="{ width: ((totalRamUsedMB / 2048) * 100).toFixed(1) + '%' }">
+                      :style="{ width: ((totalRamUsedMB / 2048) * 100).toFixed(2) + '%' }">
                     </div>
                   </div>
                 </div>
@@ -546,7 +546,7 @@
                     <div 
                       class="h-full rounded-full transition-all duration-500" 
                       :class="getMetricColor((totalDiskUsedGB / 128) * 100)"
-                      :style="{ width: ((totalDiskUsedGB / 128) * 100).toFixed(1) + '%' }">
+                      :style="{ width: ((totalDiskUsedGB / 128) * 100).toFixed(2) + '%' }">
                     </div>
                   </div>
                 </div>
@@ -625,7 +625,7 @@
                 <div>
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">CPU</span>
-                    <span class="font-medium font-mono text-white tabular-nums">{{ srv.cpu_percent }}%</span>
+                    <span class="font-medium font-mono text-white tabular-nums">{{ Number(srv.cpu_percent).toFixed(2) }}%</span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
                     <div 
@@ -641,7 +641,7 @@
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">RAM</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ (srv.memory.used / (1024*1024)).toFixed(0) }}MB <span class="text-[#636366] font-normal">/ {{ (srv.memory.total / (1024*1024)).toFixed(0) }}MB ({{ srv.memory.percent }}%)</span>
+                      {{ (srv.memory.used / (1024*1024)).toFixed(0) }}MB <span class="text-[#636366] font-normal">/ {{ (srv.memory.total / (1024*1024)).toFixed(0) }}MB ({{ Number(srv.memory.percent).toFixed(2) }}%)</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
@@ -658,7 +658,7 @@
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">Disk</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ (srv.disk.used / (1024*1024*1024)).toFixed(1) }}GB <span class="text-[#636366] font-normal">/ {{ (srv.disk.total / (1024*1024*1024)).toFixed(0) }}GB ({{ srv.disk.percent }}%)</span>
+                      {{ (srv.disk.used / (1024*1024*1024)).toFixed(1) }}GB <span class="text-[#636366] font-normal">/ {{ (srv.disk.total / (1024*1024*1024)).toFixed(0) }}GB ({{ Number(srv.disk.percent).toFixed(2) }}%)</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
@@ -706,7 +706,7 @@
               <div class="my-6">
                 <div class="flex items-baseline justify-between mb-2">
                   <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">{{ totalDiskUsedGB.toFixed(1) }}</span>
-                  <span class="text-sm text-[#8e8e93] font-mono">/ 90.0 GB ({{ ((totalDiskUsedGB / 90) * 100).toFixed(1) }}%)</span>
+                  <span class="text-sm text-[#8e8e93] font-mono">/ 90.0 GB ({{ ((totalDiskUsedGB / 90) * 100).toFixed(2) }}%)</span>
                 </div>
                 <div class="w-full h-2 rounded-full bg-[#2c2c2e] overflow-hidden">
                   <div class="h-full bg-[#0a84ff] rounded-full" :style="{ width: ((totalDiskUsedGB / 90) * 100) + '%' }"></div>
@@ -1020,7 +1020,7 @@
                 <h3 class="text-sm font-semibold text-white">CPU Usage</h3>
                 <p class="text-[11px] text-[#8e8e93]">Average system CPU load</p>
               </div>
-              <span class="text-sm font-bold font-mono text-[#0a84ff] tabular-nums">{{ activeServerModal.cpu_percent.toFixed(1) }}%</span>
+              <span class="text-sm font-bold font-mono text-[#0a84ff] tabular-nums">{{ activeServerModal.cpu_percent.toFixed(2) }}%</span>
             </div>
             <div class="relative h-44 w-full">
               <canvas id="detailChartCpu"></canvas>
@@ -1049,7 +1049,7 @@
                 <p class="text-[11px] text-[#8e8e93]">Active RAM allocation at sample time</p>
               </div>
               <span class="text-sm font-bold font-mono text-[#30d158] tabular-nums">
-                {{ (activeServerModal.memory.used / (1024*1024)).toFixed(1) }} MB ({{ activeServerModal.memory.percent.toFixed(1) }}%)
+                {{ (activeServerModal.memory.used / (1024*1024)).toFixed(1) }} MB ({{ activeServerModal.memory.percent.toFixed(2) }}%)
               </span>
             </div>
             <div class="relative h-44 w-full">
@@ -1145,7 +1145,7 @@
                 <p class="text-[11px] text-[#8e8e93]">ZRAM & memory compression allocation</p>
               </div>
               <span class="text-sm font-bold font-mono text-[#30d158] tabular-nums">
-                {{ activeServerModal.swap ? (activeServerModal.swap.used / (1024*1024)).toFixed(1) + ' MB (' + activeServerModal.swap.percent.toFixed(1) + '%)' : (activeServerModal.os === 'windows' ? 'Memory Compression: Active' : 'ZRAM Active') }}
+                {{ activeServerModal.swap ? (activeServerModal.swap.used / (1024*1024)).toFixed(1) + ' MB (' + activeServerModal.swap.percent.toFixed(2) + '%)' : (activeServerModal.os === 'windows' ? 'Memory Compression: Active' : 'ZRAM Active') }}
               </span>
             </div>
             <div class="relative h-44 w-full">
@@ -1909,7 +1909,7 @@
                   borderWidth: 0.5,
                   cornerRadius: 8,
                   callbacks: {
-                    label: (c) => `${c.dataset.label}: ${c.parsed.y} ${unit}`
+                    label: (c) => unit === '%' ? `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)} ${unit}` : `${c.dataset.label}: ${c.parsed.y} ${unit}`
                   }
                 }
               },
@@ -1947,7 +1947,7 @@
           // 1. CPU
           detailChartInstances.cpu = createMiniChart(
             'detailChartCpu', 'CPU', '#0a84ff', 'rgba(10, 132, 255, 0.1)',
-            [+(baseCpu*0.8).toFixed(1), +(baseCpu*1.2).toFixed(1), +(baseCpu*1.5).toFixed(1), +(baseCpu*0.9).toFixed(1), +(baseCpu*1.1).toFixed(1), +(baseCpu*0.95).toFixed(1), +baseCpu.toFixed(1)], '%'
+            [+(baseCpu*0.8).toFixed(2), +(baseCpu*1.2).toFixed(2), +(baseCpu*1.5).toFixed(2), +(baseCpu*0.9).toFixed(2), +(baseCpu*1.1).toFixed(2), +(baseCpu*0.95).toFixed(2), +baseCpu.toFixed(2)], '%'
           );
 
           // 2. CPU Docker
@@ -2135,7 +2135,7 @@
             }
           } catch (e) {
             servers.value.forEach(s => {
-              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(1)));
+              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(2)));
               s.network.speed_rx_bps = Math.max(50000, Math.round(s.network.speed_rx_bps * (1 + (Math.random() * 0.2 - 0.1))));
               s.network.speed_tx_bps = Math.max(20000, Math.round(s.network.speed_tx_bps * (1 + (Math.random() * 0.2 - 0.1))));
             });
@@ -2322,7 +2322,10 @@
                       padding: 10,
                       cornerRadius: 10,
                       titleFont: { family: '-apple-system, "SF Pro Text", sans-serif', size: 12, weight: '600' },
-                      bodyFont: { family: '"SF Mono", monospace', size: 11 }
+                      bodyFont: { family: '"SF Mono", monospace', size: 11 },
+                      callbacks: {
+                        label: (c) => chartMode.value === 'cpu' ? `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}%` : `${c.dataset.label}: ${c.parsed.y} MB/s`
+                      }
                     }
                   },
                   scales: {
