@@ -218,8 +218,7 @@
               v-model="pollIntervalSec" 
               @change="updatePollingSchedule"
               class="bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] text-[11px] rounded-full px-3 py-1.5 border border-white/10 outline-none cursor-pointer appearance-none pr-6 text-center font-medium transition-colors">
-              <option :value="1" class="bg-[#1c1c1e] text-white">1s Realtime</option>
-              <option :value="2" class="bg-[#1c1c1e] text-white">2s Live</option>
+              <option :value="3" class="bg-[#1c1c1e] text-white">3s sync</option>
               <option :value="5" class="bg-[#1c1c1e] text-white">5s sync</option>
               <option :value="15" class="bg-[#1c1c1e] text-white">15s sync</option>
               <option :value="0" class="bg-[#1c1c1e] text-white">Paused</option>
@@ -254,29 +253,40 @@
           
           <!-- Master Telemetry Chart Hero Tile (8 cols) -->
           <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
-                        <!-- Header with Metric Toggles, Series Legend and Timescale -->
+            <!-- Header with Metric Toggles, Series Legend and Timescale -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
               <div>
-                <h2 class="text-sm font-semibold tracking-wider text-white uppercase">STREAM</h2>
+                <div class="flex items-center gap-3">
+                  <div class="w-2 h-2 rounded-full bg-[#0a84ff]"></div>
+                  <div>
+                    <h2 class="text-base font-semibold tracking-display text-white">Cluster Telemetry Stream</h2>
+                    <p class="text-xs text-[#8e8e93]">Live multi-node metrics via Cloudflare gRPC Tunnels</p>
+                  </div>
+                </div>
+
+                <!-- Apple Style Series Legend -->
+                <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> VPS 1 (Tokyo)</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> VPS 2 (Ubuntu)</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#48484a] border-b border-dashed border-[#8e8e93] inline-block"></span> VPS 3 (Debian)</span>
+                </div>
+                <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2.5">
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] border-b border-dashed border-[#8e8e93] inline-block"></span> Outbound TX</span>
+                </div>
               </div>
 
               <div class="flex items-center gap-2 self-start sm:self-center">
                 <!-- Apple Segmented Toggle: CPU vs Bandwidth -->
                 <div class="inline-flex bg-[#1c1c1e] rounded-[9px] p-0.5 border border-white/10 shadow-inner">
                   <button 
-                    @click="setChartMode('ram')"
-                    :class="chartMode === 'ram' ? 'bg-[#0a84ff] text-white shadow-sm font-semibold' : 'text-[#8e8e93] hover:text-white'"
-                    class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
-                    RAM Load
-                  </button>
-                  <button 
-                    @click="setChartMode('cpu')"
+                    @click="chartMode = 'cpu'; renderCharts()"
                     :class="chartMode === 'cpu' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
                     class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
                     CPU Load
                   </button>
                   <button 
-                    @click="setChartMode('network')"
+                    @click="chartMode = 'network'; renderCharts()"
                     :class="chartMode === 'network' ? 'bg-[#2c2c2e] text-white shadow-sm font-medium' : 'text-[#8e8e93] hover:text-white'"
                     class="px-2.5 py-1 text-[11px] rounded-[7px] transition-all">
                     Bandwidth
@@ -413,9 +423,9 @@
                   </div>
                   <div>
                     <h3 class="text-sm font-semibold text-white tracking-headline group-hover:text-[#0a84ff] transition-colors">
-                      {{ getServerDisplayName(srv) }}
+                      {{ srv.name }}
                     </h3>
-                    <p v-if="srv.ip && srv.location" class="text-[11px] text-[#8e8e93] mt-0.5"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
+                    <p class="text-[11px] text-[#8e8e93]"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
                   </div>
                 </div>
 
@@ -433,7 +443,7 @@
                 <div>
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">CPU</span>
-                    <span class="font-medium font-mono text-white tabular-nums">{{ Number(srv.cpu_percent).toFixed(1) }}%</span>
+                    <span class="font-medium font-mono text-white tabular-nums">{{ srv.cpu_percent }}%</span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
                     <div 
@@ -449,7 +459,7 @@
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">RAM</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ (srv.memory.used / (1024*1024)).toFixed(0) }}MB <span class="text-[#636366] font-normal">/ {{ (srv.memory.total / (1024*1024)).toFixed(0) }}MB ({{ Number(srv.memory.percent).toFixed(1) }}%)</span>
+                      {{ (srv.memory.used / (1024*1024)).toFixed(0) }}MB <span class="text-[#636366] font-normal">/ {{ (srv.memory.total / (1024*1024)).toFixed(0) }}MB ({{ srv.memory.percent }}%)</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
@@ -466,7 +476,7 @@
                   <div class="flex justify-between text-xs mb-1.5">
                     <span class="text-[#8e8e93]">Disk</span>
                     <span class="font-medium font-mono text-white tabular-nums">
-                      {{ (srv.disk.used / (1024*1024*1024)).toFixed(1) }}GB <span class="text-[#636366] font-normal">/ {{ (srv.disk.total / (1024*1024*1024)).toFixed(0) }}GB ({{ Number(srv.disk.percent).toFixed(1) }}%)</span>
+                      {{ (srv.disk.used / (1024*1024*1024)).toFixed(1) }}GB <span class="text-[#636366] font-normal">/ {{ (srv.disk.total / (1024*1024*1024)).toFixed(0) }}GB ({{ srv.disk.percent }}%)</span>
                     </span>
                   </div>
                   <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
@@ -792,7 +802,7 @@
         <div class="space-y-2.5 text-xs font-mono">
           <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
             <span class="text-[#8e8e93]">CPU Usage:</span>
-            <span class="text-white tabular-nums">{{ Number(activeServerModal.cpu_percent).toFixed(1) }}%</span>
+            <span class="text-white tabular-nums">{{ activeServerModal.cpu_percent }}%</span>
           </div>
           <div class="flex justify-between p-2.5 rounded-[10px] bg-[#1c1c1e]/60 border border-white/[0.04]">
             <span class="text-[#8e8e93]">RAM Allocated:</span>
@@ -897,11 +907,19 @@
       setup() {
         // Navigation & Display State
         const activeTab = ref('telemetry');
-        const chartMode = ref('ram'); // Default to RAM Load to showcase real OS differences!       // 'cpu' or 'network'
-        const timeRange = ref('Live'); // Default to Task Manager Live Rolling Wave
+        const chartMode = ref('cpu');       // 'cpu' or 'network'
+        const timeRange = ref('Live');
+        const agentSecret = ref(localStorage.getItem('vps_agent_secret') || 'hoangngocbach-secret-2026');
+        const liveHistory = ref({
+          labels: ['-33s', '-30s', '-27s', '-24s', '-21s', '-18s', '-15s', '-12s', '-9s', '-6s', '-3s', 'Now'],
+          vps1: [2.0, 2.1, 1.9, 2.2, 2.0, 2.3, 2.1, 2.0, 2.2, 2.1, 2.0, 2.0],
+          vps2: [1.3, 1.4, 1.5, 1.3, 1.6, 1.4, 1.3, 1.5, 1.4, 1.3, 1.4, 1.4],
+          vps3: [0.6, 0.7, 0.6, 0.8, 0.7, 0.6, 0.7, 0.6, 0.8, 0.7, 0.6, 0.6],
+          rx: [1.2, 1.3, 1.1, 1.4, 1.2, 1.3, 1.2, 1.4, 1.3, 1.2, 1.3, 1.3],
+          tx: [0.5, 0.6, 0.5, 0.7, 0.6, 0.5, 0.6, 0.5, 0.7, 0.6, 0.5, 0.5]
+        });
         const isRefreshing = ref(false);
-        const pollIntervalSec = ref(3); // 3s sync Task Manager cadence default
-        const currentYScaleMax = ref(10); // Auto-scale zoom 0 - 10% default
+        const pollIntervalSec = ref(3);
         let pollTimer = null;
         let masterChartInstance = null;
 
@@ -909,7 +927,7 @@
         const servers = ref([
           {
             id: 'vps1',
-            name: 'vps 1 (Window Server)',
+            name: 'VPS 1 (Tokyo Win 2022)',
             os: 'windows',
             ip: '20.44.176.166',
             location: 'Tokyo, JP',
@@ -923,7 +941,7 @@
           },
           {
             id: 'vps2',
-            name: 'vps2 (Ubuntu)',
+            name: 'VPS 2 (Ubuntu Beszel Hub)',
             os: 'linux',
             ip: '20.89.130.95',
             location: 'East Asia',
@@ -937,10 +955,10 @@
           },
           {
             id: 'vps3',
-            name: 'vps3 (Debian)',
+            name: 'VPS 3 (Debian 12 Worker)',
             os: 'linux',
-            ip: '20.89.131.102',
-            location: 'Southeast Asia',
+            ip: '172.197.200.15',
+            location: 'Malaysia West',
             tunnel_url: 'https://vps3.hoangngocbach.id.vn',
             is_online: true,
             pingMs: 18,
@@ -969,14 +987,6 @@
         }
 
         // Server Detail Modal
-        function getServerDisplayName(srv) {
-          if (!srv) return '';
-          if (srv.id === 'vps1') return 'vps 1 (Window Server)';
-          if (srv.id === 'vps2') return 'vps2 (Ubuntu)';
-          if (srv.id === 'vps3') return 'vps3 (Debian)';
-          return srv.name || srv.id;
-        }
-
         const activeServerModal = ref(null);
         function openServerDetail(srv) {
           activeServerModal.value = srv;
@@ -990,177 +1000,9 @@
           loadFilesForSelectedServer();
         }
 
-        // =====================================================================
-        // Distinct Time-Range Historical Baselines (1h, 6h, 24h, 7d)
-        // =====================================================================
-        const timeRangeBaselines = {
-          '1h': {
-            labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
-            ram: {
-              vps1: [93.5, 94.2, 95.6, 94.8, 95.1, 95.5],
-              vps2: [51.8, 52.4, 53.9, 53.0, 52.7, 53.6],
-              vps3: [46.8, 47.2, 48.5, 48.0, 47.4, 48.1]
-            },
-            cpu: {
-              vps1: [1.2, 1.5, 2.4, 1.8, 1.4, 1.6],
-              vps2: [0.2, 0.3, 0.5, 0.4, 0.2, 0.3],
-              vps3: [0.4, 0.5, 0.8, 0.6, 0.4, 0.5]
-            },
-            rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7],
-            tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7]
-          },
-          '6h': {
-            labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
-            ram: {
-              vps1: [88.2, 91.5, 96.8, 97.2, 95.9, 94.8],
-              vps2: [48.5, 51.0, 58.4, 55.8, 54.0, 53.1],
-              vps3: [44.0, 45.6, 51.8, 49.8, 48.5, 47.5]
-            },
-            cpu: {
-              vps1: [0.9, 1.3, 5.8, 3.4, 2.1, 1.4],
-              vps2: [0.2, 0.3, 2.4, 1.5, 0.8, 0.3],
-              vps3: [0.3, 0.4, 1.9, 1.1, 0.7, 0.4]
-            },
-            rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6],
-            tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6]
-          },
-          '24h': {
-            labels: ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'],
-            ram: {
-              vps1: [82.4, 85.0, 92.6, 96.5, 95.0, 93.5],
-              vps2: [42.0, 43.8, 52.5, 58.2, 55.0, 51.2],
-              vps3: [38.5, 40.0, 47.8, 52.0, 49.2, 46.0]
-            },
-            cpu: {
-              vps1: [0.5, 0.4, 1.8, 7.5, 4.8, 2.2],
-              vps2: [0.1, 0.1, 0.9, 3.8, 2.4, 0.8],
-              vps3: [0.2, 0.2, 0.8, 2.1, 1.5, 0.6]
-            },
-            rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5],
-            tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9]
-          },
-          '7d': {
-            labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'],
-            ram: {
-              vps1: [78.0, 83.5, 89.2, 95.8, 96.4, 93.8],
-              vps2: [39.2, 44.0, 48.6, 54.2, 56.8, 50.5],
-              vps3: [35.0, 38.5, 42.8, 48.0, 49.8, 44.8]
-            },
-            cpu: {
-              vps1: [3.8, 4.9, 5.2, 6.1, 4.4, 1.8],
-              vps2: [1.8, 2.4, 2.8, 3.2, 2.1, 0.8],
-              vps3: [1.1, 1.4, 1.5, 1.9, 1.3, 0.6]
-            },
-            rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6],
-            tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6]
-          }
-        };
-
-        // =====================================================================
-        // Realtime Rolling Buffer (Windows Task Manager Wave for RAM, CPU & Bandwidth)
-        // =====================================================================
-        const rollingBuffer = {
-          labels: [],
-          ramVps1: [],
-          ramVps2: [],
-          ramVps3: [],
-          cpuVps1: [],
-          cpuVps2: [],
-          cpuVps3: [],
-          rx: [],
-          tx: []
-        };
-
-        function initRollingBuffer() {
-          const now = Date.now();
-          rollingBuffer.labels = [];
-          rollingBuffer.ramVps1 = [];
-          rollingBuffer.ramVps2 = [];
-          rollingBuffer.ramVps3 = [];
-          rollingBuffer.cpuVps1 = [];
-          rollingBuffer.cpuVps2 = [];
-          rollingBuffer.cpuVps3 = [];
-          rollingBuffer.rx = [];
-          rollingBuffer.tx = [];
-
-          const baseRam1 = Number(servers.value[0]?.memory?.percent || 95.2);
-          const baseRam2 = Number(servers.value[1]?.memory?.percent || 53.3);
-          const baseRam3 = Number(servers.value[2]?.memory?.percent || 47.9);
-
-          for (let i = 19; i >= 0; i--) {
-            const t = new Date(now - i * (pollIntervalSec.value > 0 ? pollIntervalSec.value * 1000 : 3000));
-            rollingBuffer.labels.push(t.toTimeString().split(' ')[0]);
-
-            // Realistic micro-wave variations around live node baselines
-            const r1 = +(baseRam1 + Math.sin((20 - i) * 0.45) * 0.4 + (Math.random() * 0.2 - 0.1)).toFixed(1);
-            const r2 = +(baseRam2 + Math.cos((20 - i) * 0.4) * 0.35 + (Math.random() * 0.2 - 0.1)).toFixed(1);
-            const r3 = +(baseRam3 + Math.sin((20 - i) * 0.35) * 0.3 + (Math.random() * 0.15 - 0.08)).toFixed(1);
-
-            const c1 = +(1.5 + Math.sin((20 - i) * 0.5) * 0.4 + (Math.random() * 0.2 - 0.1)).toFixed(1);
-            const c2 = +(0.3 + Math.cos((20 - i) * 0.4) * 0.1 + (Math.random() * 0.08 - 0.04)).toFixed(1);
-            const c3 = +(0.5 + Math.sin((20 - i) * 0.35) * 0.15 + (Math.random() * 0.08 - 0.04)).toFixed(1);
-
-            const rx = +(1.2 + Math.cos((20 - i) * 0.5) * 0.35 + (Math.random() * 0.2 - 0.1)).toFixed(2);
-            const tx = +(0.5 + Math.sin((20 - i) * 0.4) * 0.15 + (Math.random() * 0.1 - 0.05)).toFixed(2);
-
-            rollingBuffer.ramVps1.push(Math.min(99, Math.max(1, r1)));
-            rollingBuffer.ramVps2.push(Math.min(99, Math.max(1, r2)));
-            rollingBuffer.ramVps3.push(Math.min(99, Math.max(1, r3)));
-
-            rollingBuffer.cpuVps1.push(Math.max(0.1, c1));
-            rollingBuffer.cpuVps2.push(Math.max(0.1, c2));
-            rollingBuffer.cpuVps3.push(Math.max(0.1, c3));
-
-            rollingBuffer.rx.push(Math.max(0.1, rx));
-            rollingBuffer.tx.push(Math.max(0.05, tx));
-          }
-        }
-
-        function pushRollingSample() {
-          const now = new Date();
-          const timeLabel = now.toTimeString().split(' ')[0];
-
-          const ram1 = Number(servers.value[0]?.memory?.percent ?? 95.2);
-          const ram2 = Number(servers.value[1]?.memory?.percent ?? 53.3);
-          const ram3 = Number(servers.value[2]?.memory?.percent ?? 47.9);
-
-          const c1 = Number(servers.value[0]?.cpu_percent ?? 1.5);
-          const c2 = Number(servers.value[1]?.cpu_percent ?? 0.3);
-          const c3 = Number(servers.value[2]?.cpu_percent ?? 0.5);
-
-          const rx = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
-          const tx = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
-
-          if (rollingBuffer.labels.length >= 20) {
-            rollingBuffer.labels.shift();
-            rollingBuffer.ramVps1.shift();
-            rollingBuffer.ramVps2.shift();
-            rollingBuffer.ramVps3.shift();
-            rollingBuffer.cpuVps1.shift();
-            rollingBuffer.cpuVps2.shift();
-            rollingBuffer.cpuVps3.shift();
-            rollingBuffer.rx.shift();
-            rollingBuffer.tx.shift();
-          }
-
-          rollingBuffer.labels.push(timeLabel);
-          rollingBuffer.ramVps1.push(ram1);
-          rollingBuffer.ramVps2.push(ram2);
-          rollingBuffer.ramVps3.push(ram3);
-          rollingBuffer.cpuVps1.push(c1);
-          rollingBuffer.cpuVps2.push(c2);
-          rollingBuffer.cpuVps3.push(c3);
-          rollingBuffer.rx.push(rx);
-          rollingBuffer.tx.push(tx);
-        }
-
         const chartHistory = ref(null);
 
         async function fetchChartHistory() {
-          if (timeRange.value === 'Live') {
-            applyChartData(true);
-            return;
-          }
           try {
             const res = await fetch(`/api/telemetry/history?range=${timeRange.value}`);
             if (res.ok) {
@@ -1170,29 +1012,17 @@
               }
             }
           } catch (e) {
-            // fallback to local timeRangeBaselines
+            console.warn('API /api/telemetry/history not available, using baseline:', e);
           }
-          applyChartData(true);
+          renderCharts();
         }
 
         function setTimeRange(range) {
           timeRange.value = range;
-          if (range === 'Live') {
-            chartHistory.value = null;
-            applyChartData(true);
-          } else {
-            chartHistory.value = null;
-            applyChartData(true);
-            fetchChartHistory();
-          }
+          fetchChartHistory();
         }
 
-        function setChartMode(mode) {
-          chartMode.value = mode;
-          applyChartData(true);
-        }
-
-        // Polling Schedule Controller (Default 3s sync)
+        // Polling Schedule Controller
         function updatePollingSchedule() {
           if (pollTimer) clearInterval(pollTimer);
           if (pollIntervalSec.value > 0) {
@@ -1204,46 +1034,52 @@
           }
         }
 
-        // Live Metric Generation & Ingestion (Shift & Push on every sync pulse)
+        // Telemetry Data Ingestion
         async function fetchMetrics() {
           isRefreshing.value = true;
-          let fetchedFromServer = false;
           try {
             const res = await fetch('/api/telemetry/latest');
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) {
                 servers.value = data;
-                fetchedFromServer = true;
               }
             }
           } catch (e) {
-            // Offline fallback
-          }
-
-          if (!fetchedFromServer) {
             servers.value.forEach(s => {
-              s.cpu_percent = Math.max(0.2, Math.min(98.5, +(s.cpu_percent + (Math.random() * 0.4 - 0.2)).toFixed(1)));
-              const ramDrift = Math.floor(Math.random() * 5) - 2;
-              s.memory.used = Math.max(100*1024*1024, Math.min(s.memory.total, s.memory.used + ramDrift * 1024 * 1024));
-              s.memory.percent = +((s.memory.used / s.memory.total) * 100).toFixed(1);
-
-              const rxJitter = 1 + (Math.random() * 0.16 - 0.08);
-              const txJitter = 1 + (Math.random() * 0.16 - 0.08);
-              s.network.speed_rx_bps = Math.max(75000, Math.round(s.network.speed_rx_bps * rxJitter));
-              s.network.speed_tx_bps = Math.max(30000, Math.round(s.network.speed_tx_bps * txJitter));
-
-              if (Math.random() > 0.6) {
-                s.pingMs = Math.max(4, s.pingMs + (Math.floor(Math.random() * 3) - 1));
-              }
+              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(1)));
+              s.network.speed_rx_bps = Math.max(50000, Math.round(s.network.speed_rx_bps * (1 + (Math.random() * 0.2 - 0.1))));
+              s.network.speed_tx_bps = Math.max(20000, Math.round(s.network.speed_tx_bps * (1 + (Math.random() * 0.2 - 0.1))));
             });
+          } finally {
+            if (timeRange.value === 'Live') {
+              const nowSec = new Date().toLocaleTimeString('vi-VN', { minute: '2-digit', second: '2-digit' });
+              liveHistory.value.labels.push(nowSec);
+              if (liveHistory.value.labels.length > 12) liveHistory.value.labels.shift();
+
+              const s1 = servers.value.find(s => s.id === 'vps1') || servers.value[0];
+              const s2 = servers.value.find(s => s.id === 'vps2') || servers.value[1];
+              const s3 = servers.value.find(s => s.id === 'vps3') || servers.value[2];
+
+              liveHistory.value.vps1.push(s1 ? +s1.cpu_percent.toFixed(2) : 0);
+              if (liveHistory.value.vps1.length > 12) liveHistory.value.vps1.shift();
+
+              liveHistory.value.vps2.push(s2 ? +s2.cpu_percent.toFixed(2) : 0);
+              if (liveHistory.value.vps2.length > 12) liveHistory.value.vps2.shift();
+
+              liveHistory.value.vps3.push(s3 ? +s3.cpu_percent.toFixed(2) : 0);
+              if (liveHistory.value.vps3.length > 12) liveHistory.value.vps3.shift();
+
+              const rxVal = parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2));
+              const txVal = parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2));
+              liveHistory.value.rx.push(rxVal);
+              if (liveHistory.value.rx.length > 12) liveHistory.value.rx.shift();
+              liveHistory.value.tx.push(txVal);
+              if (liveHistory.value.tx.length > 12) liveHistory.value.tx.shift();
+            }
+            isRefreshing.value = false;
+            renderCharts();
           }
-
-          // Push new sample to rolling buffer
-          pushRollingSample();
-
-          isRefreshing.value = false;
-          applyChartData(true);
         }
 
         function simulateOrFetchMetrics() {
@@ -1252,212 +1088,130 @@
 
         function refreshData() {
           fetchMetrics();
-          fetchChartHistory();
           if (activeTab.value === 'storage') loadFilesForSelectedServer();
           if (activeTab.value === 'expenses') fetchExpenses();
         }
 
-        // Apply Chart Data with RAM Load Hero Mode & Auto-scale Zoom
-        function applyChartData(withTransition = true) {
-          if (!masterChartInstance) {
-            renderCharts();
-            return;
-          }
-
-          let timeLabels, series1, series2, series3, rxData, txData;
-
-          if (timeRange.value === 'Live') {
-            timeLabels = [...rollingBuffer.labels];
-            if (chartMode.value === 'ram') {
-              series1 = [...rollingBuffer.ramVps1];
-              series2 = [...rollingBuffer.ramVps2];
-              series3 = [...rollingBuffer.ramVps3];
-            } else {
-              series1 = [...rollingBuffer.cpuVps1];
-              series2 = [...rollingBuffer.cpuVps2];
-              series3 = [...rollingBuffer.cpuVps3];
-            }
-            rxData = [...rollingBuffer.rx];
-            txData = [...rollingBuffer.tx];
-          } else {
-            const h = chartHistory.value;
-            const baseline = timeRangeBaselines[timeRange.value] || timeRangeBaselines['1h'];
-            timeLabels = (h && h.labels) ? h.labels : baseline.labels;
-
-            if (chartMode.value === 'ram') {
-              const liveRam1 = Number(servers.value[0]?.memory?.percent || 95.2);
-              const liveRam2 = Number(servers.value[1]?.memory?.percent || 53.3);
-              const liveRam3 = Number(servers.value[2]?.memory?.percent || 47.9);
-
-              series1 = (h && h.ramSeries && h.ramSeries.vps1)
-                ? [...h.ramSeries.vps1.slice(0, -1), liveRam1]
-                : [...baseline.ram.vps1, liveRam1];
-              series2 = (h && h.ramSeries && h.ramSeries.vps2)
-                ? [...h.ramSeries.vps2.slice(0, -1), liveRam2]
-                : [...baseline.ram.vps2, liveRam2];
-              series3 = (h && h.ramSeries && h.ramSeries.vps3)
-                ? [...h.ramSeries.vps3.slice(0, -1), liveRam3]
-                : [...baseline.ram.vps3, liveRam3];
-            } else {
-              const liveCpu1 = Number(servers.value[0]?.cpu_percent || 1.5);
-              const liveCpu2 = Number(servers.value[1]?.cpu_percent || 0.3);
-              const liveCpu3 = Number(servers.value[2]?.cpu_percent || 0.5);
-
-              series1 = (h && h.cpuSeries && h.cpuSeries.vps1)
-                ? [...h.cpuSeries.vps1.slice(0, -1), liveCpu1]
-                : [...baseline.cpu.vps1, liveCpu1];
-              series2 = (h && h.cpuSeries && h.cpuSeries.vps2)
-                ? [...h.cpuSeries.vps2.slice(0, -1), liveCpu2]
-                : [...baseline.cpu.vps2, liveCpu2];
-              series3 = (h && h.cpuSeries && h.cpuSeries.vps3)
-                ? [...h.cpuSeries.vps3.slice(0, -1), liveCpu3]
-                : [...baseline.cpu.vps3, liveCpu3];
-            }
-
-            const currentRxMbps = parseFloat((totalRxSpeed.value / (1024 * 1024)).toFixed(2));
-            const currentTxMbps = parseFloat((totalTxSpeed.value / (1024 * 1024)).toFixed(2));
-
-            rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
-              ? [...h.bandwidthSeries.rx.slice(0, -1), currentRxMbps]
-              : [...baseline.rx, currentRxMbps];
-
-            txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
-              ? [...h.bandwidthSeries.tx.slice(0, -1), currentTxMbps]
-              : [...baseline.tx, currentTxMbps];
-          }
-
-          // Auto-Scale Calculations
-          let targetYMax = 100;
-          if (chartMode.value === 'ram') {
-            targetYMax = 100;
-          } else if (chartMode.value === 'cpu') {
-            const allCpuVals = [...series1, ...series2, ...series3];
-            const peakVal = Math.max(...allCpuVals, 0.5);
-            if (peakVal <= 2.5) {
-              targetYMax = 3;
-            } else if (peakVal <= 6) {
-              targetYMax = 8;
-            } else if (peakVal <= 18) {
-              targetYMax = 25;
-            } else if (peakVal <= 45) {
-              targetYMax = 50;
-            } else {
-              targetYMax = 100;
-            }
-          } else {
-            const allBwVals = [...rxData, ...txData];
-            const peakBw = Math.max(...allBwVals, 0.2);
-            if (peakBw <= 2.5) {
-              targetYMax = 3;
-            } else if (peakBw <= 6) {
-              targetYMax = 8;
-            } else if (peakBw <= 15) {
-              targetYMax = 20;
-            } else {
-              targetYMax = Math.ceil(peakBw * 1.3);
-            }
-          }
-          currentYScaleMax.value = targetYMax;
-
-          masterChartInstance.data.labels = timeLabels;
-
-          if (chartMode.value === 'ram' || chartMode.value === 'cpu') {
-            // Original Apple monochrome palette, transparent OLED background (NO red background fill!)
-            masterChartInstance.data.datasets = [
-              {
-                label: 'vps 1 (Window Server)',
-                data: series1,
-                borderColor: '#0a84ff', // Apple System Blue
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'vps2 (Ubuntu)',
-                data: series2,
-                borderColor: '#8e8e93', // Apple System Gray 1
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 1.8,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'vps3 (Debian)',
-                data: series3,
-                borderColor: '#636366', // Apple System Gray 2 Dashed
-                borderDash: [4, 4],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 1.8,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3.5,
-                pointHoverRadius: 6
-              }
-            ];
-          } else {
-            // Bandwidth
-            masterChartInstance.data.datasets = [
-              {
-                label: 'Inbound RX (Combined)',
-                data: rxData,
-                borderColor: '#0a84ff',
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
-                pointHoverRadius: 6
-              },
-              {
-                label: 'Outbound TX (Combined)',
-                data: txData,
-                borderColor: '#8e8e93',
-                borderDash: [3, 3],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.35,
-                borderWidth: 1.8,
-                pointRadius: timeRange.value === 'Live' ? 1.5 : 3,
-                pointHoverRadius: 6
-              }
-            ];
-          }
-
-          if (masterChartInstance.options.scales && masterChartInstance.options.scales.y) {
-            masterChartInstance.options.scales.y.min = 0;
-            masterChartInstance.options.scales.y.max = targetYMax;
-          }
-
-          if (withTransition) {
-            masterChartInstance.update();
-          } else {
-            masterChartInstance.update('none');
-          }
-        }
-
-        // Master Chart Initialization
+        // Master Chart Rendering (Apple Health / Activity / Instruments Graph Style)
         function renderCharts() {
           nextTick(() => {
             const ctx = document.getElementById('masterTelemetryChart');
             if (!ctx) return;
 
-            if (masterChartInstance) {
-              applyChartData(true);
-              return;
+            let timeLabels = [];
+            let vps1Data = [];
+            let vps2Data = [];
+            let vps3Data = [];
+            let rxData = [];
+            let txData = [];
+
+            if (timeRange.value === 'Live') {
+              timeLabels = liveHistory.value.labels;
+              vps1Data = liveHistory.value.vps1;
+              vps2Data = liveHistory.value.vps2;
+              vps3Data = liveHistory.value.vps3;
+              rxData = liveHistory.value.rx;
+              txData = liveHistory.value.tx;
+            } else {
+              const h = chartHistory.value;
+              timeLabels = (h && h.labels) ? h.labels : (timeRange.value === '1h'
+                ? ['60m', '50m', '40m', '30m', '20m', '10m', 'Now']
+                : timeRange.value === '6h'
+                ? ['6h', '5h', '4h', '3h', '2h', '1h', 'Now']
+                : timeRange.value === '24h'
+                ? ['24h', '20h', '16h', '12h', '8h', '4h', 'Now']
+                : ['7d', '6d', '5d', '4d', '3d', '2d', 'Now']);
+
+              vps1Data = (h && h.cpuSeries && h.cpuSeries.vps1)
+                ? [...h.cpuSeries.vps1.slice(0, -1), servers.value[0].cpu_percent]
+                : [1.9, 2.3, 4.1, 3.0, 2.4, 2.7, servers.value[0].cpu_percent];
+
+              vps2Data = (h && h.cpuSeries && h.cpuSeries.vps2)
+                ? [...h.cpuSeries.vps2.slice(0, -1), servers.value[1].cpu_percent]
+                : [1.2, 1.4, 1.8, 1.9, 1.3, 1.5, servers.value[1].cpu_percent];
+
+              vps3Data = (h && h.cpuSeries && h.cpuSeries.vps3)
+                ? [...h.cpuSeries.vps3.slice(0, -1), servers.value[2].cpu_percent]
+                : [0.7, 0.9, 1.1, 0.8, 0.9, 0.8, servers.value[2].cpu_percent];
+
+              rxData = (h && h.bandwidthSeries && h.bandwidthSeries.rx)
+                ? [...h.bandwidthSeries.rx.slice(0, -1), parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))]
+                : [0.9, 1.3, 1.6, 1.2, 1.4, 1.3, parseFloat((totalRxSpeed.value / (1024*1024)).toFixed(2))];
+
+              txData = (h && h.bandwidthSeries && h.bandwidthSeries.tx)
+                ? [...h.bandwidthSeries.tx.slice(0, -1), parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))]
+                : [0.4, 0.5, 0.7, 0.6, 0.4, 0.5, parseFloat((totalTxSpeed.value / (1024*1024)).toFixed(2))];
             }
+
+            const datasets = chartMode.value === 'cpu' ? [
+              {
+                label: 'VPS 1 (Tokyo Win 2022)',
+                data: vps1Data,
+                borderColor: '#0a84ff', // Apple System Blue
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'VPS 2 (Ubuntu Beszel)',
+                data: vps2Data,
+                borderColor: '#8e8e93', // Apple System Gray 1
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'VPS 3 (Debian Worker)',
+                data: vps3Data,
+                borderColor: '#636366', // Apple System Gray 2 Dashed
+                borderDash: [4, 4],
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              }
+            ] : [
+              {
+                label: 'Inbound RX (Combined)',
+                data: rxData,
+                borderColor: '#0a84ff', // Apple System Blue
+                backgroundColor: 'rgba(10, 132, 255, 0.08)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              },
+              {
+                label: 'Outbound TX (Combined)',
+                data: txData,
+                borderColor: '#8e8e93', // Apple System Gray 1 Dashed
+                borderDash: [3, 3],
+                fill: false,
+                tension: 0.4,
+                borderWidth: 1.8,
+                pointRadius: 2.5,
+                pointHoverRadius: 5
+              }
+            ];
+
+            if (masterChartInstance) masterChartInstance.destroy();
 
             masterChartInstance = new Chart(ctx, {
               type: 'line',
-              data: { labels: [], datasets: [] },
+              data: { labels: timeLabels, datasets },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 400, easing: 'easeOutQuad' },
+                animation: { duration: 300 },
                 plugins: {
                   legend: { display: false },
                   tooltip: {
@@ -1475,30 +1229,25 @@
                 scales: {
                   x: {
                     grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
-                    ticks: { 
-                      color: '#8e8e93', 
-                      font: { family: '"SF Mono", monospace', size: 10 },
-                      maxTicksLimit: 6,
-                      maxRotation: 0
-                    }
+                    ticks: { color: '#8e8e93', font: { family: '"SF Mono", monospace', size: 10 } }
                   },
                   y: {
                     min: 0,
-                    max: 100,
+                    suggestedMax: chartMode.value === 'cpu' 
+                      ? (timeRange.value === 'Live' ? Math.max(8, Math.ceil(Math.max(...vps1Data, ...vps2Data, ...vps3Data) * 1.5)) : 100)
+                      : Math.max(5, Math.ceil(Math.max(...rxData, ...txData) * 1.4)),
                     grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
                     ticks: {
                       color: '#8e8e93',
                       font: { family: '"SF Mono", monospace', size: 10 },
                       callback: function(val) {
-                        return chartMode.value === 'network' ? val + ' MB/s' : val + '%';
+                        return chartMode.value === 'cpu' ? val + '%' : val + ' MB/s';
                       }
                     }
                   }
                 }
               }
             });
-
-            applyChartData(false);
           });
         }
 
@@ -1528,7 +1277,7 @@
           const srv = currentStorageServer.value;
           try {
             const res = await fetch(`${srv.tunnel_url}/api/files/list`, {
-              headers: { 'X-Agent-Secret': 'secret-token-change-me' }
+              headers: { 'X-Agent-Secret': agentSecret.value }
             });
             if (res.ok) {
               const data = await res.json();
@@ -1571,7 +1320,7 @@
                   'Chunk-Index': i.toString(),
                   'Total-Chunks': totalChunks.toString(),
                   'File-Name': encodeURIComponent(file.name),
-                  'X-Agent-Secret': 'secret-token-change-me'
+                  'X-Agent-Secret': agentSecret.value
                 },
                 body: chunk
               });
@@ -1593,7 +1342,7 @@
         }
 
         function getDownloadUrl(fileName) {
-          return `${currentStorageServer.value.tunnel_url}/api/files/download?name=${encodeURIComponent(fileName)}&token=secret-token-change-me`;
+          return `${currentStorageServer.value.tunnel_url}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(agentSecret.value)}`;
         }
 
         function copyShareLink(fileName) {
@@ -1609,7 +1358,7 @@
           try {
             await fetch(`${srv.tunnel_url}/api/files/delete?name=${encodeURIComponent(fileName)}`, {
               method: 'DELETE',
-              headers: { 'X-Agent-Secret': 'secret-token-change-me' }
+              headers: { 'X-Agent-Secret': agentSecret.value }
             });
           } catch (e) {}
         }
@@ -1781,9 +1530,7 @@
           activeTab,
           chartMode,
           timeRange,
-          currentYScaleMax,
           setTimeRange,
-          setChartMode,
           isRefreshing,
           pollIntervalSec,
           updatePollingSchedule,
@@ -1796,7 +1543,6 @@
           averageClusterCpu,
           getMetricColor,
           activeServerModal,
-          getServerDisplayName,
           openServerDetail,
           openDriveForCurrentServer,
           renderCharts,

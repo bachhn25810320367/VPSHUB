@@ -5,9 +5,9 @@
  */
 
 const DEFAULT_SERVERS = [
-  { id: "vps1", name: "vps 1 (Window Server)", os: "windows", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
-  { id: "vps2", name: "vps2 (Ubuntu)", os: "linux", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
-  { id: "vps3", name: "vps3 (Debian)", os: "linux", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
+  { id: "vps1", name: "VPS 1 (Tokyo Win 2022)", os: "windows", ip: "20.44.176.166", location: "Tokyo, JP", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
+  { id: "vps2", name: "VPS 2 (Ubuntu Beszel Hub)", os: "linux", ip: "20.89.130.95", location: "East Asia", tunnelUrl: "https://vps2.hoangngocbach.id.vn" },
+  { id: "vps3", name: "VPS 3 (Debian 12 Worker)", os: "linux", ip: "172.197.200.15", location: "Malaysia West", tunnelUrl: "https://vps3.hoangngocbach.id.vn" }
 ];
 
 async function getCosmosAuthHeader(verb, resourceType, resourceId, keyBase64, dateStr) {
@@ -169,6 +169,8 @@ export async function onRequest(context) {
 
       result.push({
         ...latest,
+        ip: srv.ip,
+        location: srv.location,
         is_online: isOnline,
         tunnel_url: srv.tunnelUrl,
         last_seen_seconds_ago: nowSec - (latest.timestamp || nowSec),
@@ -178,105 +180,26 @@ export async function onRequest(context) {
     return jsonResponse(result);
   }
 
-  // 2. GET /api/telemetry/history (Multi-Timescale for RAM, CPU & Bandwidth)
+  // 2. GET /api/telemetry/history
   if (path === "/api/telemetry/history" && method === "GET") {
     const range = url.searchParams.get("range") || "1h";
+    let labels = ["60m", "50m", "40m", "30m", "20m", "10m", "Now"];
+    if (range === "6h") labels = ["6h", "5h", "4h", "3h", "2h", "1h", "Now"];
+    if (range === "24h") labels = ["24h", "20h", "16h", "12h", "8h", "4h", "Now"];
+    if (range === "7d") labels = ["7d", "6d", "5d", "4d", "3d", "2d", "Now"];
 
-    const baselines = {
-      'Live': {
-        labels: Array.from({ length: 20 }, (_, i) => `${(19 - i) * 3}s`).reverse(),
-        ram: {
-          vps1: [94.8, 95.1, 95.4, 94.9, 95.2, 95.6, 95.0, 95.3, 95.5, 95.1, 94.8, 95.2, 95.7, 95.3, 94.9, 95.1, 95.4, 95.2, 95.0, 95.2],
-          vps2: [52.8, 53.1, 53.5, 53.0, 53.4, 53.8, 53.2, 53.6, 53.4, 53.1, 52.9, 53.3, 53.7, 53.4, 53.0, 53.2, 53.6, 53.5, 53.2, 53.3],
-          vps3: [47.5, 47.8, 48.2, 47.9, 48.0, 48.3, 47.7, 48.1, 47.9, 47.6, 47.4, 47.9, 48.2, 48.0, 47.7, 47.8, 48.1, 48.0, 47.8, 47.9]
-        },
-        cpu: {
-          vps1: [1.2, 1.5, 1.8, 1.4, 1.6, 2.1, 1.5, 1.7, 1.9, 1.3, 1.5, 1.8, 2.2, 1.6, 1.4, 1.7, 1.9, 1.5, 1.3, 1.5],
-          vps2: [0.2, 0.3, 0.4, 0.3, 0.2, 0.4, 0.3, 0.3, 0.4, 0.2, 0.3, 0.4, 0.5, 0.3, 0.2, 0.3, 0.4, 0.3, 0.2, 0.3],
-          vps3: [0.4, 0.5, 0.6, 0.5, 0.4, 0.6, 0.5, 0.6, 0.7, 0.5, 0.4, 0.5, 0.7, 0.6, 0.5, 0.5, 0.6, 0.5, 0.4, 0.5]
-        },
-        bandwidth: {
-          rx: [1.2, 1.4, 1.6, 1.5, 1.3, 1.7, 1.5, 1.6, 1.8, 1.4, 1.3, 1.5, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.4, 1.6],
-          tx: [0.4, 0.5, 0.6, 0.5, 0.4, 0.6, 0.5, 0.6, 0.7, 0.5, 0.4, 0.5, 0.8, 0.6, 0.5, 0.5, 0.7, 0.6, 0.5, 0.6]
-        }
-      },
-      '1h': {
-        labels: ['60m', '50m', '40m', '30m', '20m', '10m', 'Now'],
-        ram: {
-          vps1: [93.5, 94.2, 95.6, 94.8, 95.1, 95.5, 95.2],
-          vps2: [51.8, 52.4, 53.9, 53.0, 52.7, 53.6, 53.3],
-          vps3: [46.8, 47.2, 48.5, 48.0, 47.4, 48.1, 47.9]
-        },
-        cpu: {
-          vps1: [1.2, 1.5, 2.4, 1.8, 1.4, 1.6, 1.5],
-          vps2: [0.2, 0.3, 0.5, 0.4, 0.2, 0.3, 0.3],
-          vps3: [0.4, 0.5, 0.8, 0.6, 0.4, 0.5, 0.5]
-        },
-        bandwidth: {
-          rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7, 1.8],
-          tx: [0.4, 0.6, 1.0, 0.8, 0.5, 0.7, 0.6]
-        }
-      },
-      '6h': {
-        labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
-        ram: {
-          vps1: [88.2, 91.5, 96.8, 97.2, 95.9, 94.8, 95.2],
-          vps2: [48.5, 51.0, 58.4, 55.8, 54.0, 53.1, 53.3],
-          vps3: [44.0, 45.6, 51.8, 49.8, 48.5, 47.5, 47.9]
-        },
-        cpu: {
-          vps1: [0.9, 1.3, 5.8, 3.4, 2.1, 1.4, 1.5],
-          vps2: [0.2, 0.3, 2.4, 1.5, 0.8, 0.3, 0.3],
-          vps3: [0.3, 0.4, 1.9, 1.1, 0.7, 0.4, 0.5]
-        },
-        bandwidth: {
-          rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6, 1.8],
-          tx: [0.3, 0.5, 1.9, 1.3, 0.8, 0.6, 0.6]
-        }
-      },
-      '24h': {
-        labels: ['24h', '20h', '16h', '12h', '8h', '4h', 'Now'],
-        ram: {
-          vps1: [82.4, 85.0, 92.6, 96.5, 95.0, 93.5, 95.2],
-          vps2: [42.0, 43.8, 52.5, 58.2, 55.0, 51.2, 53.3],
-          vps3: [38.5, 40.0, 47.8, 52.0, 49.2, 46.0, 47.9]
-        },
-        cpu: {
-          vps1: [0.5, 0.4, 1.8, 7.5, 4.8, 2.2, 1.5],
-          vps2: [0.1, 0.1, 0.9, 3.8, 2.4, 0.8, 0.3],
-          vps3: [0.2, 0.2, 0.8, 2.1, 1.5, 0.6, 0.5]
-        },
-        bandwidth: {
-          rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5, 1.8],
-          tx: [0.1, 0.1, 0.6, 2.9, 2.0, 0.9, 0.6]
-        }
-      },
-      '7d': {
-        labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Now'],
-        ram: {
-          vps1: [78.0, 83.5, 89.2, 95.8, 96.4, 93.8, 95.2],
-          vps2: [39.2, 44.0, 48.6, 54.2, 56.8, 50.5, 53.3],
-          vps3: [35.0, 38.5, 42.8, 48.0, 49.8, 44.8, 47.9]
-        },
-        cpu: {
-          vps1: [3.8, 4.9, 5.2, 6.1, 4.4, 1.8, 1.5],
-          vps2: [1.8, 2.4, 2.8, 3.2, 2.1, 0.8, 0.3],
-          vps3: [1.1, 1.4, 1.5, 1.9, 1.3, 0.6, 0.5]
-        },
-        bandwidth: {
-          rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6, 1.8],
-          tx: [1.9, 2.3, 2.0, 2.5, 1.7, 0.6, 0.6]
-        }
-      }
-    };
-
-    const sel = baselines[range] || baselines['1h'];
     return jsonResponse({
       range,
-      labels: sel.labels,
-      ramSeries: sel.ram,
-      cpuSeries: sel.cpu,
-      bandwidthSeries: sel.bandwidth
+      labels,
+      cpuSeries: {
+        vps1: [2.1, 2.5, 4.2, 3.1, 2.7, 3.2, 3.5],
+        vps2: [1.2, 1.4, 1.8, 1.9, 1.3, 1.6, 1.5],
+        vps3: [0.7, 0.8, 1.0, 0.7, 0.9, 0.8, 0.9]
+      },
+      bandwidthSeries: {
+        rx: [1.2, 1.5, 2.1, 1.8, 1.6, 2.0, 2.4],
+        tx: [0.5, 0.7, 0.9, 0.8, 0.6, 0.8, 1.1]
+      }
     });
   }
 
