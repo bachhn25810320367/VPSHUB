@@ -163,7 +163,7 @@
     <!-- ================================================================= -->
     <!-- AUTHENTICATION GATE (APPLE GLASS LOGIN MODAL)                     -->
     <!-- ================================================================= -->
-    <div v-if="!isAuthenticated" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl">
+    <div v-if="!isAuthenticated && !isPublicShareView" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl">
       <div class="apple-glass-card max-w-sm w-full p-8 space-y-6 border border-white/15 shadow-2xl text-center">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0a84ff]/15 border border-[#0a84ff]/30 text-[#0a84ff] text-2xl shadow-apple-cta mx-auto">
           <i class="fa-solid fa-shield-halved"></i>
@@ -192,6 +192,132 @@
         </form>
       </div>
     </div>
+
+    <!-- ================================================================= -->
+    <!-- STANDALONE PUBLIC SHARE VIEW (DROPBOX/GDRIVE STYLE)               -->
+    <!-- ================================================================= -->
+    <div v-if="isPublicShareView" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-y-auto">
+      <!-- Background Ambient Glow -->
+      <div class="absolute inset-0 bg-radial-vignette opacity-80 pointer-events-none"></div>
+      <div class="w-96 h-96 rounded-full bg-[#0a84ff]/10 blur-3xl absolute top-10 pointer-events-none"></div>
+
+      <div class="relative z-10 max-w-2xl w-full space-y-6">
+        <!-- Brand Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-[#0a84ff]/20 border border-[#0a84ff]/30 flex items-center justify-center text-[#0a84ff]">
+              <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+            </div>
+            <div>
+              <h1 class="text-sm font-bold text-white uppercase tracking-wider">VPS HUB Storage</h1>
+              <p class="text-[10px] text-[#8e8e93]">Secure Direct Transfer</p>
+            </div>
+          </div>
+          <a href="/" class="text-xs text-[#8e8e93] hover:text-white transition-colors flex items-center gap-1">
+            <span>Dashboard</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+
+        <!-- Share Card -->
+        <div class="apple-glass-card p-6 sm:p-8 space-y-6 border border-white/15 shadow-2xl">
+          <!-- Loading State -->
+          <div v-if="publicShareLoading" class="py-16 text-center space-y-3">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[#0a84ff]"></i>
+            <p class="text-xs text-[#8e8e93]">Retrieving file from server node...</p>
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="publicShareError" class="py-12 text-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-[#ff453a]/15 text-[#ff453a] flex items-center justify-center mx-auto text-xl">
+              <i class="fa-solid fa-link-slash"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white">Share Link Unavailable</h3>
+            <p class="text-xs text-[#8e8e93] max-w-sm mx-auto">{{ publicShareError }}</p>
+            <a href="/" class="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-all">
+              Go to Homepage
+            </a>
+          </div>
+
+          <!-- Active File Content -->
+          <div v-else-if="publicShareData" class="space-y-6">
+            <!-- File Info Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+              <div class="flex items-center gap-3 truncate">
+                <div class="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
+                  <i :class="getFileIcon(publicShareData.file_name)"></i>
+                </div>
+                <div class="truncate">
+                  <h2 class="text-base font-semibold text-white truncate" :title="publicShareData.file_name">
+                    {{ publicShareData.file_name }}
+                  </h2>
+                  <p class="text-xs text-[#8e8e93] font-mono mt-0.5">
+                    {{ formatBytes(publicShareData.file_size) }} · Node: {{ publicShareData.vps_name }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Direct Download CTA -->
+              <a 
+                :href="'/api/files/share/raw?id=' + publicShareData.id + '&download=1'"
+                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all flex-shrink-0">
+                <i class="fa-solid fa-download"></i>
+                <span>Download File</span>
+              </a>
+            </div>
+
+            <!-- Interactive Inline Preview for Public Visitor -->
+            <div class="rounded-xl overflow-hidden bg-black/40 border border-white/10 min-h-[160px] flex items-center justify-center">
+              <!-- Image Preview -->
+              <img 
+                v-if="isImageFile(publicShareData.file_name)"
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="max-h-[60vh] max-w-full rounded-xl object-contain mx-auto shadow-lg"
+                alt="Image Preview">
+
+              <!-- Video Player -->
+              <video 
+                v-else-if="isVideoFile(publicShareData.file_name)"
+                controls autoplay
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="max-h-[60vh] w-full rounded-xl bg-black shadow-lg">
+              </video>
+
+              <!-- Audio Player -->
+              <div v-else-if="isAudioFile(publicShareData.file_name)" class="w-full p-8 text-center space-y-3">
+                <i class="fa-solid fa-headphones text-4xl text-[#0a84ff]"></i>
+                <audio controls autoplay :src="'/api/files/share/raw?id=' + publicShareData.id" class="w-full mt-2"></audio>
+              </div>
+
+              <!-- PDF Reader -->
+              <iframe 
+                v-else-if="isPdfFile(publicShareData.file_name)"
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="w-full h-[60vh] rounded-xl bg-white border-0">
+              </iframe>
+
+              <!-- Code / Text Reader -->
+              <div v-else-if="isTextFile(publicShareData.file_name)" class="w-full p-4 font-mono text-xs text-left max-h-[55vh] overflow-auto">
+                <pre class="whitespace-pre-wrap text-[#f5f5f7]"><code>{{ publicShareTextContent }}</code></pre>
+              </div>
+
+              <!-- Generic Info -->
+              <div v-else class="p-8 text-center space-y-2">
+                <i class="fa-solid fa-file-arrow-down text-4xl text-[#8e8e93]"></i>
+                <p class="text-xs text-[#8e8e93]">No inline preview available for this file extension.</p>
+              </div>
+            </div>
+
+            <!-- Public Meta Footer -->
+            <div class="flex items-center justify-between text-[11px] text-[#636366] pt-2">
+              <span>Shared from VPS Hub</span>
+              <span>Direct encrypted stream</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ================================================================= -->
     <!-- APPLE FLOATING NAVIGATION BAR (SEGMENTED CONTROL)                -->
@@ -667,7 +793,7 @@
                     <tr v-for="f in files" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
                       <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
                         <i :class="getFileIcon(f.name)"></i>
-                        <span class="text-white font-medium truncate">{{ f.name }}</span>
+                        <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" title="Click to preview">{{ f.name }}</span>
                       </td>
                       <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
                         {{ formatBytes(f.size) }}
@@ -676,6 +802,21 @@
                         {{ formatDate(f.modTime) }}
                       </td>
                       <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
+                        <!-- Preview Button -->
+                        <button 
+                          @click="openPreview(f)"
+                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#0a84ff]/15 hover:bg-[#0a84ff]/30 text-[#0a84ff] transition-all"
+                          title="Preview File">
+                          <i class="fa-solid fa-eye text-[11px]"></i>
+                        </button>
+                        <!-- Public Share Button -->
+                        <button 
+                          @click="openShareModal(f)"
+                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#ff9f0a]/15 hover:bg-[#ff9f0a]/30 text-[#ff9f0a] transition-all"
+                          title="Share File Publicly">
+                          <i class="fa-solid fa-share-nodes text-[11px]"></i>
+                        </button>
+                        <!-- Download Link -->
                         <a 
                           :href="getDownloadUrl(f.name)" 
                           target="_blank"
@@ -683,12 +824,7 @@
                           title="Download">
                           <i class="fa-solid fa-download text-[11px]"></i>
                         </a>
-                        <button 
-                          @click="copyShareLink(f.name)"
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all"
-                          title="Copy Link">
-                          <i class="fa-solid fa-link text-[11px]"></i>
-                        </button>
+                        <!-- Delete Button -->
                         <button 
                           @click="deleteFile(f.name)"
                           class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all"
@@ -1155,6 +1291,192 @@
     </div>
 
     <!-- ================================================================= -->
+    
+    <!-- ================================================================= -->
+    <!-- MODAL: FILE PREVIEW (IMAGE, VIDEO, AUDIO, PDF, CODE)              -->
+    <!-- ================================================================= -->
+    <div v-if="showPreviewModal" class="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl">
+      <div class="apple-glass-card max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/15 shadow-2xl overflow-hidden">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
+          <div class="flex items-center gap-3 truncate pr-4">
+            <div class="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-sm">
+              <i :class="getFileIcon(previewFile ? previewFile.name : '')"></i>
+            </div>
+            <div class="truncate">
+              <h3 class="text-sm font-semibold text-white truncate">{{ previewFile ? previewFile.name : '' }}</h3>
+              <p class="text-[11px] text-[#8e8e93] font-mono">
+                {{ formatBytes(previewFile ? previewFile.size : 0) }} · Node: {{ currentStorageServer.name }}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Share from preview -->
+            <button 
+              @click="openShareModal(previewFile)" 
+              class="px-2.5 py-1.5 rounded-lg bg-[#ff9f0a]/15 hover:bg-[#ff9f0a]/25 text-[#ff9f0a] text-xs font-medium transition-all flex items-center gap-1.5"
+              title="Share File Publicly">
+              <i class="fa-solid fa-share-nodes text-[11px]"></i>
+              <span class="hidden sm:inline">Share</span>
+            </button>
+            <!-- Direct Download -->
+            <a 
+              :href="getDownloadUrl(previewFile ? previewFile.name : '')" 
+              download
+              class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all flex items-center gap-1.5"
+              title="Download File">
+              <i class="fa-solid fa-download text-[11px]"></i>
+              <span class="hidden sm:inline">Download</span>
+            </a>
+            <!-- Close -->
+            <button @click="closePreview" class="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/15 text-[#8e8e93] hover:text-white flex items-center justify-center transition-all">
+              <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Body (Preview Content) -->
+        <div class="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-black/40 min-h-[300px]">
+          <!-- Image -->
+          <img 
+            v-if="previewType === 'image'" 
+            :src="previewUrl" 
+            class="max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl mx-auto" 
+            alt="Preview">
+
+          <!-- Video -->
+          <video 
+            v-else-if="previewType === 'video'" 
+            controls autoplay 
+            :src="previewUrl" 
+            class="max-h-[70vh] w-full rounded-xl bg-black shadow-2xl">
+          </video>
+
+          <!-- Audio -->
+          <div v-else-if="previewType === 'audio'" class="w-full max-w-md p-8 text-center space-y-4 bg-[#141416] rounded-2xl border border-white/10">
+            <i class="fa-solid fa-headphones text-5xl text-[#0a84ff]"></i>
+            <p class="text-sm font-semibold text-white">{{ previewFile ? previewFile.name : '' }}</p>
+            <audio controls autoplay :src="previewUrl" class="w-full"></audio>
+          </div>
+
+          <!-- PDF -->
+          <iframe 
+            v-else-if="previewType === 'pdf'" 
+            :src="previewUrl" 
+            class="w-full h-[70vh] rounded-xl bg-white border-0">
+          </iframe>
+
+          <!-- Code / Text -->
+          <div v-else-if="previewType === 'text'" class="w-full h-full flex flex-col text-left">
+            <div class="flex justify-between items-center pb-2 mb-2 border-b border-white/10 text-xs text-[#8e8e93]">
+              <span>Plaintext / Source Preview</span>
+              <button @click="copyPreviewText" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-copy text-[10px]"></i>
+                <span>{{ textCopied ? 'Copied!' : 'Copy Code' }}</span>
+              </button>
+            </div>
+            <pre class="w-full p-4 rounded-xl bg-[#141416] border border-white/10 text-[#f5f5f7] font-mono text-xs overflow-auto max-h-[60vh] whitespace-pre-wrap"><code>{{ previewTextContent }}</code></pre>
+          </div>
+
+          <!-- Unsupported Generic File -->
+          <div v-else class="text-center space-y-3 p-8">
+            <div class="w-16 h-16 rounded-2xl bg-white/[0.06] flex items-center justify-center mx-auto text-3xl text-[#8e8e93]">
+              <i :class="getFileIcon(previewFile ? previewFile.name : '')"></i>
+            </div>
+            <h4 class="text-sm font-semibold text-white">{{ previewFile ? previewFile.name : '' }}</h4>
+            <p class="text-xs text-[#8e8e93]">Inline preview is not supported for this file format.</p>
+            <a :href="previewUrl" download class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0a84ff] text-white text-xs font-semibold shadow-apple-cta">
+              <i class="fa-solid fa-download"></i>
+              <span>Download Directly</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL: PUBLIC SHARE GENERATOR                                     -->
+    <!-- ================================================================= -->
+    <div v-if="showShareModal" class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div class="apple-glass-card max-w-md w-full p-6 space-y-5 border border-white/15 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-[#ff9f0a]/15 text-[#ff9f0a] flex items-center justify-center">
+              <i class="fa-solid fa-share-nodes text-xs"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white">Public Share Link</h3>
+          </div>
+          <button @click="showShareModal = false" class="text-[#8e8e93] hover:text-white p-1">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div v-if="shareModalLoading" class="py-8 text-center space-y-3">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl text-[#ff9f0a]"></i>
+          <p class="text-xs text-[#8e8e93]">Creating public share link on Cosmos DB...</p>
+        </div>
+
+        <div v-else-if="shareModalData" class="space-y-4 text-xs">
+          <div>
+            <span class="text-[#8e8e93] block mb-1">Target File:</span>
+            <p class="font-semibold text-white truncate font-mono bg-[#1c1c1e] px-3 py-2 rounded-lg border border-white/10">
+              {{ shareModalData.file_name }}
+            </p>
+          </div>
+
+          <div>
+            <label class="text-[#8e8e93] block mb-1">Shareable Public URL (Anyone with this link can view & download)</label>
+            <div class="flex items-center gap-2">
+              <input 
+                :value="shareModalData.share_url" 
+                readonly 
+                class="w-full bg-[#1c1c1e] border border-white/10 rounded-lg px-3 py-2 text-[#0a84ff] font-mono text-xs outline-none select-all">
+              <button 
+                @click="copyShareLinkToClipboard" 
+                class="px-3 py-2 rounded-lg bg-[#0a84ff] hover:bg-[#0071e3] text-white font-medium whitespace-nowrap shadow-apple-cta transition-all flex items-center gap-1.5">
+                <i :class="shareCopied ? 'fa-solid fa-check' : 'fa-solid fa-copy'"></i>
+                <span>{{ shareCopied ? 'Copied!' : 'Copy' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1 text-[11px] text-[#8e8e93]">
+            <p class="flex items-center gap-1.5 text-white font-medium">
+              <i class="fa-solid fa-shield-halved text-[#30d158]"></i>
+              Protected Direct Stream
+            </p>
+            <p>Your server credentials are kept safe. Cloudflare Edge securely proxies the content directly from your VPS.</p>
+          </div>
+
+          <div class="pt-3 border-t border-white/10 flex justify-between items-center text-xs">
+            <button 
+              type="button" 
+              @click="revokeCurrentShare" 
+              class="px-3 py-1.5 rounded-lg bg-[#ff453a]/15 hover:bg-[#ff453a]/25 text-[#ff453a] transition-all flex items-center gap-1.5">
+              <i class="fa-solid fa-link-slash"></i>
+              <span>Revoke Share</span>
+            </button>
+            <div class="flex items-center gap-2">
+              <a 
+                :href="shareModalData.share_url" 
+                target="_blank" 
+                class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                <span>Open in Tab</span>
+              </a>
+              <button 
+                type="button" 
+                @click="showShareModal = false" 
+                class="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#8e8e93] transition-all">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL: CHANGE PASSWORD (AZURE COSMOS DB)                          -->
     <!-- ================================================================= -->
     <div v-if="showChangePassModal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -1192,6 +1514,132 @@
         </form>
       </div>
     </div>
+
+    <!-- ================================================================= -->
+    <!-- STANDALONE PUBLIC SHARE VIEW (DROPBOX/GDRIVE STYLE)               -->
+    <!-- ================================================================= -->
+    <div v-if="isPublicShareView" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-y-auto">
+      <!-- Background Ambient Glow -->
+      <div class="absolute inset-0 bg-radial-vignette opacity-80 pointer-events-none"></div>
+      <div class="w-96 h-96 rounded-full bg-[#0a84ff]/10 blur-3xl absolute top-10 pointer-events-none"></div>
+
+      <div class="relative z-10 max-w-2xl w-full space-y-6">
+        <!-- Brand Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-[#0a84ff]/20 border border-[#0a84ff]/30 flex items-center justify-center text-[#0a84ff]">
+              <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+            </div>
+            <div>
+              <h1 class="text-sm font-bold text-white uppercase tracking-wider">VPS HUB Storage</h1>
+              <p class="text-[10px] text-[#8e8e93]">Secure Direct Transfer</p>
+            </div>
+          </div>
+          <a href="/" class="text-xs text-[#8e8e93] hover:text-white transition-colors flex items-center gap-1">
+            <span>Dashboard</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+
+        <!-- Share Card -->
+        <div class="apple-glass-card p-6 sm:p-8 space-y-6 border border-white/15 shadow-2xl">
+          <!-- Loading State -->
+          <div v-if="publicShareLoading" class="py-16 text-center space-y-3">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[#0a84ff]"></i>
+            <p class="text-xs text-[#8e8e93]">Retrieving file from server node...</p>
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="publicShareError" class="py-12 text-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-[#ff453a]/15 text-[#ff453a] flex items-center justify-center mx-auto text-xl">
+              <i class="fa-solid fa-link-slash"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white">Share Link Unavailable</h3>
+            <p class="text-xs text-[#8e8e93] max-w-sm mx-auto">{{ publicShareError }}</p>
+            <a href="/" class="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-all">
+              Go to Homepage
+            </a>
+          </div>
+
+          <!-- Active File Content -->
+          <div v-else-if="publicShareData" class="space-y-6">
+            <!-- File Info Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+              <div class="flex items-center gap-3 truncate">
+                <div class="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
+                  <i :class="getFileIcon(publicShareData.file_name)"></i>
+                </div>
+                <div class="truncate">
+                  <h2 class="text-base font-semibold text-white truncate" :title="publicShareData.file_name">
+                    {{ publicShareData.file_name }}
+                  </h2>
+                  <p class="text-xs text-[#8e8e93] font-mono mt-0.5">
+                    {{ formatBytes(publicShareData.file_size) }} · Node: {{ publicShareData.vps_name }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Direct Download CTA -->
+              <a 
+                :href="'/api/files/share/raw?id=' + publicShareData.id + '&download=1'"
+                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all flex-shrink-0">
+                <i class="fa-solid fa-download"></i>
+                <span>Download File</span>
+              </a>
+            </div>
+
+            <!-- Interactive Inline Preview for Public Visitor -->
+            <div class="rounded-xl overflow-hidden bg-black/40 border border-white/10 min-h-[160px] flex items-center justify-center">
+              <!-- Image Preview -->
+              <img 
+                v-if="isImageFile(publicShareData.file_name)"
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="max-h-[60vh] max-w-full rounded-xl object-contain mx-auto shadow-lg"
+                alt="Image Preview">
+
+              <!-- Video Player -->
+              <video 
+                v-else-if="isVideoFile(publicShareData.file_name)"
+                controls autoplay
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="max-h-[60vh] w-full rounded-xl bg-black shadow-lg">
+              </video>
+
+              <!-- Audio Player -->
+              <div v-else-if="isAudioFile(publicShareData.file_name)" class="w-full p-8 text-center space-y-3">
+                <i class="fa-solid fa-headphones text-4xl text-[#0a84ff]"></i>
+                <audio controls autoplay :src="'/api/files/share/raw?id=' + publicShareData.id" class="w-full mt-2"></audio>
+              </div>
+
+              <!-- PDF Reader -->
+              <iframe 
+                v-else-if="isPdfFile(publicShareData.file_name)"
+                :src="'/api/files/share/raw?id=' + publicShareData.id"
+                class="w-full h-[60vh] rounded-xl bg-white border-0">
+              </iframe>
+
+              <!-- Code / Text Reader -->
+              <div v-else-if="isTextFile(publicShareData.file_name)" class="w-full p-4 font-mono text-xs text-left max-h-[55vh] overflow-auto">
+                <pre class="whitespace-pre-wrap text-[#f5f5f7]"><code>{{ publicShareTextContent }}</code></pre>
+              </div>
+
+              <!-- Generic Info -->
+              <div v-else class="p-8 text-center space-y-2">
+                <i class="fa-solid fa-file-arrow-down text-4xl text-[#8e8e93]"></i>
+                <p class="text-xs text-[#8e8e93]">No inline preview available for this file extension.</p>
+              </div>
+            </div>
+
+            <!-- Public Meta Footer -->
+            <div class="flex items-center justify-between text-[11px] text-[#636366] pt-2">
+              <span>Shared from VPS Hub</span>
+              <span>Direct encrypted stream</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ================================================================= -->
     <!-- MODAL: ADD EXPENSE (APPLE SHEET MODAL)                            -->
@@ -1655,6 +2103,7 @@
           activeServerModal.value = null;
           activeTab.value = 'storage';
           loadFilesForSelectedServer();
+          checkPublicShareRoute();
         }
 
         const chartHistory = ref(null);
@@ -1746,6 +2195,7 @@
           try {
             await fetchMetrics();
             if (activeTab.value === 'storage') await loadFilesForSelectedServer();
+          checkPublicShareRoute();
             if (activeTab.value === 'expenses') await fetchExpenses();
           } finally {
             isRefreshing.value = false;
@@ -2053,12 +2503,198 @@
           } catch (e) {}
         }
 
-        function getFileIcon(name) {
+        function isImageFile(name) {
+          if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
-          if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) return 'fa-regular fa-file-zipper text-[#8e8e93]';
-          if (['json', 'js', 'ts', 'go', 'py', 'sh', 'yml', 'yaml'].includes(ext)) return 'fa-regular fa-file-code text-[#0a84ff]';
-          if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) return 'fa-regular fa-file-image text-[#8e8e93]';
+          return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'].includes(ext);
+        }
+
+        function isVideoFile(name) {
+          if (!name) return false;
+          const ext = name.split('.').pop().toLowerCase();
+          return ['mp4', 'webm', 'ogg', 'mov', 'm4v', 'mkv'].includes(ext);
+        }
+
+        function isAudioFile(name) {
+          if (!name) return false;
+          const ext = name.split('.').pop().toLowerCase();
+          return ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext);
+        }
+
+        function isPdfFile(name) {
+          if (!name) return false;
+          return name.split('.').pop().toLowerCase() === 'pdf';
+        }
+
+        function isTextFile(name) {
+          if (!name) return false;
+          const ext = name.split('.').pop().toLowerCase();
+          return ['txt', 'log', 'json', 'md', 'sh', 'py', 'js', 'ts', 'go', 'html', 'css', 'yml', 'yaml', 'conf', 'ini', 'sql', 'env', 'bat', 'ps1'].includes(ext);
+        }
+
+        function getFileIcon(name) {
+          if (!name) return 'fa-regular fa-file text-[#8e8e93]';
+          if (isImageFile(name)) return 'fa-regular fa-file-image text-[#30d158]';
+          if (isVideoFile(name)) return 'fa-regular fa-file-video text-[#ff375f]';
+          if (isAudioFile(name)) return 'fa-regular fa-file-audio text-[#ff9f0a]';
+          if (isPdfFile(name)) return 'fa-regular fa-file-pdf text-[#ff453a]';
+          if (isTextFile(name)) return 'fa-regular fa-file-code text-[#0a84ff]';
+          const ext = name.split('.').pop().toLowerCase();
+          if (['zip', 'tar', 'gz', 'rar', '7z', 'iso'].includes(ext)) return 'fa-regular fa-file-zipper text-[#bf5af2]';
           return 'fa-regular fa-file text-[#8e8e93]';
+        }
+
+        // ================= File Preview Module =================
+        const showPreviewModal = ref(false);
+        const previewFile = ref(null);
+        const previewType = ref('generic');
+        const previewUrl = ref('');
+        const previewTextContent = ref('');
+        const textCopied = ref(false);
+
+        async function openPreview(f) {
+          previewFile.value = f;
+          previewUrl.value = getDownloadUrl(f.name);
+          textCopied.value = false;
+          previewTextContent.value = '';
+
+          if (isImageFile(f.name)) {
+            previewType.value = 'image';
+          } else if (isVideoFile(f.name)) {
+            previewType.value = 'video';
+          } else if (isAudioFile(f.name)) {
+            previewType.value = 'audio';
+          } else if (isPdfFile(f.name)) {
+            previewType.value = 'pdf';
+          } else if (isTextFile(f.name)) {
+            previewType.value = 'text';
+            previewTextContent.value = 'Loading file contents...';
+            try {
+              const res = await fetch(previewUrl.value);
+              if (res.ok) {
+                const txt = await res.text();
+                previewTextContent.value = txt.slice(0, 100000);
+              } else {
+                previewTextContent.value = 'Failed to load file text.';
+              }
+            } catch (err) {
+              previewTextContent.value = 'Error fetching text: ' + err.message;
+            }
+          } else {
+            previewType.value = 'generic';
+          }
+          showPreviewModal.value = true;
+        }
+
+        function closePreview() {
+          showPreviewModal.value = false;
+          previewFile.value = null;
+        }
+
+        function copyPreviewText() {
+          if (!previewTextContent.value) return;
+          navigator.clipboard.writeText(previewTextContent.value);
+          textCopied.value = true;
+          setTimeout(() => { textCopied.value = false; }, 2000);
+        }
+
+        // ================= Public Share Module =================
+        const showShareModal = ref(false);
+        const shareModalLoading = ref(false);
+        const shareModalData = ref(null);
+        const shareCopied = ref(false);
+
+        async function openShareModal(f) {
+          if (!f) return;
+          showShareModal.value = true;
+          shareModalLoading.value = true;
+          shareModalData.value = null;
+          shareCopied.value = false;
+
+          try {
+            const res = await fetch('/api/files/share', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                vps_id: currentStorageServer.value.id,
+                vps_name: currentStorageServer.value.name,
+                file_name: f.name,
+                file_size: f.size,
+                tunnel_url: currentStorageServer.value.tunnel_url
+              })
+            });
+            if (res.ok) {
+              shareModalData.value = await res.json();
+            } else {
+              alert('Failed to generate share link.');
+              showShareModal.value = false;
+            }
+          } catch (e) {
+            alert('Error connecting to serverless function: ' + e.message);
+            showShareModal.value = false;
+          } finally {
+            shareModalLoading.value = false;
+          }
+        }
+
+        function copyShareLinkToClipboard() {
+          if (!shareModalData.value || !shareModalData.value.share_url) return;
+          navigator.clipboard.writeText(shareModalData.value.share_url);
+          shareCopied.value = true;
+          setTimeout(() => { shareCopied.value = false; }, 2000);
+        }
+
+        async function revokeCurrentShare() {
+          if (!shareModalData.value || !shareModalData.value.share_id) return;
+          if (!confirm('Are you sure you want to revoke this public share link? Anyone with the link will no longer be able to download it.')) return;
+          try {
+            await fetch(`/api/files/share?id=${shareModalData.value.share_id}`, { method: 'DELETE' });
+            alert('Share link successfully revoked.');
+            showShareModal.value = false;
+          } catch (e) {
+            alert('Failed to revoke share: ' + e.message);
+          }
+        }
+
+        // ================= Standalone Public Share Route =================
+        const isPublicShareView = ref(false);
+        const publicShareLoading = ref(false);
+        const publicShareError = ref('');
+        const publicShareData = ref(null);
+        const publicShareTextContent = ref('');
+
+        async function checkPublicShareRoute() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const shareId = urlParams.get('share');
+          if (!shareId) return;
+
+          isPublicShareView.value = true;
+          publicShareLoading.value = true;
+          publicShareError.value = '';
+
+          try {
+            const res = await fetch(`/api/files/share?id=${encodeURIComponent(shareId)}`);
+            if (!res.ok) {
+              publicShareError.value = 'This public share link does not exist, has expired, or was revoked by the owner.';
+              return;
+            }
+            const data = await res.json();
+            publicShareData.value = data;
+
+            if (isTextFile(data.file_name)) {
+              try {
+                const textRes = await fetch(`/api/files/share/raw?id=${data.id}`);
+                if (textRes.ok) {
+                  const txt = await textRes.text();
+                  publicShareTextContent.value = txt.slice(0, 80000);
+                }
+              } catch (tErr) {}
+            }
+          } catch (e) {
+            publicShareError.value = 'Failed to load shared file metadata: ' + e.message;
+          } finally {
+            publicShareLoading.value = false;
+          }
         }
 
         // ================= Expenses Module =================
@@ -2203,6 +2839,7 @@
           fetchChartHistory();
           fetchExpenses();
           loadFilesForSelectedServer();
+          checkPublicShareRoute();
           updatePollingSchedule();
 
           // Live Realtime Uptime Calculator from Real Kernel Boot Time
@@ -2286,6 +2923,33 @@
           formatSpeed,
           formatVND,
           formatDate,
+          // Preview & Share Modules
+          isImageFile,
+          isVideoFile,
+          isAudioFile,
+          isPdfFile,
+          isTextFile,
+          showPreviewModal,
+          previewFile,
+          previewType,
+          previewUrl,
+          previewTextContent,
+          textCopied,
+          openPreview,
+          closePreview,
+          copyPreviewText,
+          showShareModal,
+          shareModalLoading,
+          shareModalData,
+          shareCopied,
+          openShareModal,
+          copyShareLinkToClipboard,
+          revokeCurrentShare,
+          isPublicShareView,
+          publicShareLoading,
+          publicShareError,
+          publicShareData,
+          publicShareTextContent,
           // Authentication
           isAuthenticated,
           currentUsername,

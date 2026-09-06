@@ -476,7 +476,7 @@ export async function onRequest(context) {
   // 4. /api/expenses (CRUD)
   if (path === "/api/expenses") {
     if (method === "GET") {
-      const docs = await cosmosQuery(env, "expenses", "SELECT * FROM c WHERE c.category != 'auth_user' ORDER BY c.dueDate ASC");
+      const docs = await cosmosQuery(env, "expenses", "SELECT * FROM c WHERE c.category != 'auth_user' AND c.category != 'file_share' ORDER BY c.dueDate ASC");
       const items = docs.length > 0 ? docs : [
         {
           id: "exp-1",
@@ -566,7 +566,123 @@ export async function onRequest(context) {
     }
   }
 
-  // 5. GET /api/servers
+  // 5. /api/files/share (Public Sharing System)
+  if (path === "/api/files/share") {
+    // POST: Create public share
+    if (method === "POST") {
+      try {
+        const body = await request.json();
+        const { vps_id, vps_name, file_name, file_size, tunnel_url } = body;
+        if (!file_name || !vps_id) {
+          return jsonResponse({ error: "Missing required parameters" }, 400);
+        }
+
+        const shareId = `share_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+        const shareDoc = {
+          id: shareId,
+          category: "file_share",
+          vps_id,
+          vps_name: vps_name || vps_id,
+          file_name,
+          file_size: Number(file_size) || 0,
+          tunnel_url: tunnel_url || "",
+          created_at: new Date().toISOString(),
+          download_count: 0
+        };
+
+        await cosmosCreateItem(env, "expenses", shareDoc, "file_share");
+        return jsonResponse({
+          success: true,
+          share_id: shareId,
+          share_url: `https://vps.hoangngocbach.id.vn/?share=${shareId}`,
+          raw_url: `/api/files/share/raw?id=${shareId}`,
+          file_name,
+          file_size: shareDoc.file_size
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Failed to create share: " + e.message }, 500);
+      }
+    }
+
+    // GET: Query public share metadata
+    if (method === "GET") {
+      const shareId = url.searchParams.get("id");
+      if (!shareId) {
+        const docs = await cosmosQuery(env, "expenses", "SELECT * FROM c WHERE c.category = 'file_share' ORDER BY c.created_at DESC", [], "file_share");
+        return jsonResponse(docs);
+      }
+
+      const docs = await cosmosQuery(
+        env,
+        "expenses",
+        "SELECT * FROM c WHERE c.category = 'file_share' AND c.id = @id",
+        [{ name: "@id", value: shareId }],
+        "file_share"
+      );
+      if (!docs || docs.length === 0) {
+        return jsonResponse({ error: "Share link not found or expired" }, 404);
+      }
+      return jsonResponse(docs[0]);
+    }
+
+    // DELETE: Revoke public share
+    if (method === "DELETE") {
+      const shareId = url.searchParams.get("id");
+      if (!shareId) return jsonResponse({ error: "Share ID required" }, 400);
+      await cosmosDeleteItem(env, "expenses", shareId, "file_share");
+      return jsonResponse({ success: true, message: "Share link revoked" });
+    }
+  }
+
+  // 6. /api/files/share/raw (Public Stream & Download Proxy)
+  if (path === "/api/files/share/raw") {
+    const shareId = url.searchParams.get("id");
+    if (!shareId) return new Response("Missing share id", { status: 400 });
+
+    const docs = await cosmosQuery(
+      env,
+      "expenses",
+      "SELECT * FROM c WHERE c.category = 'file_share' AND c.id = @id",
+      [{ name: "@id", value: shareId }],
+      "file_share"
+    );
+    if (!docs || docs.length === 0) {
+      return new Response("Share link not found or expired", { status: 404 });
+    }
+
+    const share = docs[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    const agentUrl = `${share.tunnel_url}/api/files/download?name=${encodeURIComponent(share.file_name)}&token=${encodeURIComponent(secret)}`;
+
+    const forwardHeaders = new Headers();
+    const range = request.headers.get("Range");
+    if (range) forwardHeaders.set("Range", range);
+
+    try {
+      const vpsResp = await fetch(agentUrl, {
+        method: "GET",
+        headers: forwardHeaders
+      });
+
+      const responseHeaders = new Headers(vpsResp.headers);
+      responseHeaders.set("Access-Control-Allow-Origin", "*");
+      const isDownload = url.searchParams.get("download") === "1";
+      if (isDownload) {
+        responseHeaders.set("Content-Disposition", `attachment; filename="${encodeURIComponent(share.file_name)}"`);
+      } else {
+        responseHeaders.set("Content-Disposition", `inline; filename="${encodeURIComponent(share.file_name)}"`);
+      }
+
+      return new Response(vpsResp.body, {
+        status: vpsResp.status,
+        headers: responseHeaders
+      });
+    } catch (err) {
+      return new Response("Error streaming file: " + err.message, { status: 502 });
+    }
+  }
+
+  // 7. GET /api/servers
   if (path === "/api/servers" && method === "GET") {
     return jsonResponse(DEFAULT_SERVERS);
   }
