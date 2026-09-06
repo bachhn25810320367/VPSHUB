@@ -649,7 +649,7 @@ export async function onRequest(context) {
         headers: responseHeaders
       });
     } catch (err) {
-      return jsonResponse({ error: "Error streaming file: " + err.message }, 502);
+      return jsonResponse({ error: `Tunnel (${share.tunnel_url}) unreachable: ` + err.message, share_id: shareId }, 502);
     }
   }
 
