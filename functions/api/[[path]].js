@@ -454,10 +454,19 @@ export async function onRequest(context) {
         name: body.name || body.vps_id,
         os: body.os || "linux",
         timestamp: body.timestamp || Math.floor(Date.now() / 1000),
+        boot_time: body.boot_time || 0,
+        uptime: body.uptime || 0,
         cpu_percent: body.cpu_percent || 0,
         memory: body.memory || {},
+        swap: body.swap || {},
         disk: body.disk || {},
+        disk_io: body.disk_io || {},
         network: body.network || {},
+        load_avg: body.load_avg || [],
+        docker_cpu: body.docker_cpu || 0,
+        docker_memory_mb: body.docker_memory_mb || 0,
+        containers: body.containers || [],
+        services: body.services || [],
         ttl: 604800 // 7 days automatic expiration
       };
 
