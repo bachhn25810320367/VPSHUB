@@ -2130,7 +2130,12 @@
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) {
+                data.forEach(d => { if (d && !d.id && d.vps_id) d.id = d.vps_id; });
+                const keepId = selectedStorageServerId.value;
                 servers.value = data;
+                if (keepId && !servers.value.some(s => s && (s.id === keepId || s.vps_id === keepId))) {
+                  console.warn('Selected storage node offline, staying on', keepId);
+                }
               }
             }
           } catch (e) {
@@ -2364,7 +2369,8 @@
         ]);
 
         const currentStorageServer = computed(() => {
-          return servers.value.find(s => s.id === selectedStorageServerId.value) || servers.value[0];
+          if (!servers.value || servers.value.length === 0) return null;
+          return servers.value.find(s => s && (s.id === selectedStorageServerId.value || s.vps_id === selectedStorageServerId.value)) || servers.value.find(s => s && (s.id || s.vps_id)) || servers.value[0];
         });
 
         const uploadStatus = ref({
@@ -2378,6 +2384,7 @@
 
         async function loadFilesForSelectedServer() {
           const srv = currentStorageServer.value;
+          if (!srv || !srv.tunnel_url) return;
           try {
             const res = await fetch(`${srv.tunnel_url}/api/files/list`, {
               headers: { 'X-Agent-Secret': agentSecret.value }
@@ -2444,8 +2451,19 @@
           }, 600);
         }
 
+        // Private download always goes through same-origin Cloudflare proxy
+        // so token never leaks in cross-origin URL and tunnel 403/challenge is bypassed.
         function getDownloadUrl(fileName) {
-          return `${currentStorageServer.value.tunnel_url}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(agentSecret.value)}`;
+          const srv = currentStorageServer.value;
+          const vid = srv ? (srv.id || srv.vps_id || '') : '';
+          if (!fileName) return '#';
+          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&name=${encodeURIComponent(fileName)}&download=1`;
+        }
+        function getPreviewUrl(fileName) {
+          const srv = currentStorageServer.value;
+          const vid = srv ? (srv.id || srv.vps_id || '') : '';
+          if (!fileName) return '';
+          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&name=${encodeURIComponent(fileName)}`;
         }
 
         function copyShareLink(fileName) {
@@ -2517,7 +2535,7 @@
 
         async function openPreview(f) {
           previewFile.value = f;
-          previewUrl.value = getDownloadUrl(f.name);
+          previewUrl.value = getPreviewUrl(f.name);
           textCopied.value = false;
           previewTextContent.value = '';
 

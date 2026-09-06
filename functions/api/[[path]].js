@@ -362,6 +362,8 @@ export async function onRequest(context) {
 
       result.push({
         ...latest,
+        id: srv.id,
+        vps_id: srv.id,
         name: srv.name,
         hostname: srv.hostname,
         os_display: srv.os_display,
@@ -645,6 +647,35 @@ export async function onRequest(context) {
       });
     } catch (err) {
       return new Response("Error streaming file: " + err.message, { status: 502 });
+    }
+  }
+
+  // 6b. GET /api/files/download (Private authenticated proxy to agent)
+  if (path === "/api/files/download" && method === "GET") {
+    const vpsId = url.searchParams.get("vps_id") || url.searchParams.get("vpsId") || url.searchParams.get("id") || "";
+    const fileName = url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
+    if (!fileName) return new Response("Missing file name", { status: 400 });
+    let srv = null;
+    if (vpsId) srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase());
+    // fallback: if vps_id missing, try to infer from file share? else pick vps1 only if single
+    if (!srv && vpsId) return new Response("Unknown vps_id: " + vpsId, { status: 400 });
+    if (!srv) srv = DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    const agentUrl = `${srv.tunnelUrl}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(secret)}`;
+    const fwd = new Headers();
+    const range = request.headers.get("Range");
+    if (range) fwd.set("Range", range);
+    try {
+      const r = await fetch(agentUrl, { method: "GET", headers: fwd });
+      const h = new Headers(r.headers);
+      h.set("Access-Control-Allow-Origin", "*");
+      const isDl = url.searchParams.get("download") === "1";
+      // Force correct disposition: browser <a download> needs attachment
+      if (isDl) h.set("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+      else if (!h.get("Content-Disposition")) h.set("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
+      return new Response(r.body, { status: r.status, headers: h });
+    } catch (e) {
+      return new Response("Proxy to agent failed: " + e.message + " (" + agentUrl.replace(secret, "***") + ")", { status: 502 });
     }
   }
 
