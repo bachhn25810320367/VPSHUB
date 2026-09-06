@@ -660,24 +660,7 @@
                         {{ formatBytes(f.size) }}
                       </td>
                       <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
-                        {{ formatDate,
-          // Authentication
-          isAuthenticated,
-          currentUsername,
-          loginForm,
-          loginError,
-          handleLogin,
-          handleLogout,
-          formatUptime,
-          // Beszel Detail
-          detailTimeRange,
-          containerSearch,
-          serviceSearch,
-          filteredContainers,
-          filteredServices,
-          getContainerRamTotal,
-          closeServerDetail,
-          updateDetailCharts(f.modTime) }}
+                        {{ formatDate(f.modTime) }}
                       </td>
                       <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
                         <a 
@@ -2155,7 +2138,24 @@
           formatBytes,
           formatSpeed,
           formatVND,
-          formatDate
+          formatDate,
+          // Authentication
+          isAuthenticated,
+          currentUsername,
+          loginForm,
+          loginError,
+          handleLogin,
+          handleLogout,
+          formatUptime,
+          // Beszel Detail
+          detailTimeRange,
+          containerSearch,
+          serviceSearch,
+          filteredContainers,
+          filteredServices,
+          getContainerRamTotal,
+          closeServerDetail,
+          updateDetailCharts
         };
       }
     }).mount('#app');
