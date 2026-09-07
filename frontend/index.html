@@ -604,7 +604,9 @@
                     <p class="text-[11px] text-[#8e8e93]"><span class="font-mono tabular-nums">{{ srv.ip }}</span> · {{ srv.location }}</p>
                     <p class="text-[10px] text-[#8e8e93] mt-1 flex items-center gap-1.5 font-mono">
                       <i class="fa-regular fa-clock text-[#30d158]"></i>
-                      <span class="text-white font-medium">{{ formatUptime(srv.uptime_seconds) }}</span>
+                      <span class="text-white font-medium">Age {{ formatUptime(srv.age_seconds) }}</span>
+                      <span>·</span>
+                      <span class="text-[#8e8e93]" :title="'Uptime: ' + formatUptime(srv.uptime_seconds)">Up {{ formatUptime(srv.uptime_seconds) }}</span>
                     </p>
                     <p v-if="srv.last_seen_seconds_ago != null" class="text-[10px] mt-1 flex items-center gap-1.5 font-mono" :class="(srv.last_seen_seconds_ago > 90) ? 'text-[#ff9f0a]' : 'text-[#8e8e93]'">
                       <i class="fa-solid fa-satellite-dish" :class="(srv.last_seen_seconds_ago > 90) ? 'text-[#ff9f0a]' : 'text-[#30d158]'"></i>
@@ -978,7 +980,7 @@
           <div class="hidden lg:flex items-center gap-3 text-xs text-[#8e8e93] font-mono pl-3">
             <span class="hover:text-white cursor-pointer"><i class="fa-solid fa-network-wired mr-1 text-[#0a84ff]"></i>{{ activeServerModal.ip }}</span>
             <span>·</span>
-            <span><i class="fa-regular fa-clock mr-1 text-[#30d158]"></i>{{ formatUptime(activeServerModal.uptime_seconds) }}</span>
+            <span><i class="fa-regular fa-clock mr-1 text-[#30d158]"></i>Age {{ formatUptime(activeServerModal.age_seconds) }} · Up {{ formatUptime(activeServerModal.uptime_seconds) }}</span>
             <span>·</span>
             <span>
               <i v-if="activeServerModal.id === 'vps1' || activeServerModal.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] mr-1.5"></i>
@@ -2041,7 +2043,10 @@
             ip: '20.44.176.166',
             location: 'Tokyo, JP',
             tunnel_url: 'https://vps1.hoangngocbach.id.vn',
+            created_at: 1788517427,
             boot_time: 1788535482,
+            uptime_seconds: 159800,
+            age_seconds: 253000,
             is_online: true,
             pingMs: 14,
             cpu_percent: 2.8,
@@ -2056,7 +2061,10 @@
             ip: '20.89.130.95',
             location: 'East Asia',
             tunnel_url: 'https://vps2.hoangngocbach.id.vn',
+            created_at: 1788509039,
             boot_time: 1788615670,
+            uptime_seconds: 79600,
+            age_seconds: 261000,
             is_online: true,
             pingMs: 9,
             cpu_percent: 1.4,
@@ -2141,7 +2149,14 @@
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) {
-                data.forEach(d => { if (d && !d.id && d.vps_id) d.id = d.vps_id; });
+                const nowUnix = Math.floor(Date.now() / 1000);
+                data.forEach(d => {
+                  if (d && !d.id && d.vps_id) d.id = d.vps_id;
+                  if (!d.created_at) {
+                    d.created_at = (d.id === 'vps1') ? 1788517427 : 1788509039;
+                  }
+                  d.age_seconds = d.age_seconds || Math.max(0, nowUnix - d.created_at);
+                });
                 const keepId = selectedStorageServerId.value;
                 servers.value = data;
                 if (keepId && !servers.value.some(s => s && (s.id === keepId || s.vps_id === keepId))) {
@@ -2843,7 +2858,7 @@
           checkPublicShareRoute();
           updatePollingSchedule();
 
-          // Live Realtime Uptime Calculator from Real Kernel Boot Time
+          // Live Realtime Uptime & Age Calculator
           uptimeTicker = setInterval(() => {
             const nowUnix = Math.floor(Date.now() / 1000);
             servers.value.forEach(srv => {
@@ -2854,13 +2869,19 @@
                   srv.uptime_seconds = (srv.uptime_seconds || 0) + 1;
                 }
               }
+              const cr = srv.created_at || (srv.id === 'vps1' ? 1788517427 : 1788509039);
+              srv.age_seconds = Math.max(0, nowUnix - cr);
             });
-            if (activeServerModal.value && activeServerModal.value.is_online) {
-              if (activeServerModal.value.boot_time && activeServerModal.value.boot_time > 0) {
-                activeServerModal.value.uptime_seconds = Math.max(0, nowUnix - activeServerModal.value.boot_time);
-              } else {
-                activeServerModal.value.uptime_seconds = (activeServerModal.value.uptime_seconds || 0) + 1;
+            if (activeServerModal.value) {
+              if (activeServerModal.value.is_online) {
+                if (activeServerModal.value.boot_time && activeServerModal.value.boot_time > 0) {
+                  activeServerModal.value.uptime_seconds = Math.max(0, nowUnix - activeServerModal.value.boot_time);
+                } else {
+                  activeServerModal.value.uptime_seconds = (activeServerModal.value.uptime_seconds || 0) + 1;
+                }
               }
+              const cr = activeServerModal.value.created_at || (activeServerModal.value.id === 'vps1' ? 1788517427 : 1788509039);
+              activeServerModal.value.age_seconds = Math.max(0, nowUnix - cr);
             }
           }, 1000);
 

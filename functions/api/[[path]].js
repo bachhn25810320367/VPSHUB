@@ -15,6 +15,7 @@ const DEFAULT_SERVERS = [
     ip: "20.44.176.166",
     location: "Tokyo, JP",
     tunnelUrl: "https://vps1.hoangngocbach.id.vn",
+    created_at: 1788517427,
     boot_time: 1788535482,
     uptime_seconds: 159800,
     containers: [],
@@ -35,6 +36,7 @@ const DEFAULT_SERVERS = [
     ip: "20.89.130.95",
     location: "East Asia",
     tunnelUrl: "https://vps2.hoangngocbach.id.vn",
+    created_at: 1788509039,
     boot_time: 1788615670,
     uptime_seconds: 79600,
     containers: [
@@ -351,6 +353,8 @@ export async function onRequest(context) {
 
       const bootTime = (latest && latest.boot_time) ? latest.boot_time : srv.boot_time;
       const uptimeSec = bootTime ? (nowSec - bootTime) : ((latest && latest.uptime) || srv.uptime_seconds);
+      const createdAt = srv.created_at || (latest && latest.created_at) || (srv.id === 'vps1' ? 1788517427 : 1788509039);
+      const ageSec = Math.max(0, nowSec - createdAt);
 
       const containers = (latest && latest.containers && latest.containers.length > 0) ? latest.containers : (srv.containers || []);
       const services = (latest && latest.services && latest.services.length > 0) ? latest.services : (srv.services || []);
@@ -374,6 +378,8 @@ export async function onRequest(context) {
         tunnel_url: srv.tunnelUrl,
         boot_time: bootTime,
         uptime_seconds: uptimeSec,
+        created_at: createdAt,
+        age_seconds: ageSec,
         containers,
         services,
         swap,
