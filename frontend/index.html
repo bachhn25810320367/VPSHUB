@@ -742,145 +742,413 @@
       <!-- =============================================================== -->
       <section v-show="activeTab === 'storage'" class="space-y-6">
         
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <!-- Quota Summary Card (4 cols) -->
-          <div class="lg:col-span-4 apple-glass-card p-6 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-                <h3 class="text-sm font-semibold text-white tracking-headline">Ubuntu Storage Quota</h3>
-                <span class="text-xs font-medium text-[#30d158]">vps2 Pool</span>
-              </div>
+        <!-- Grid layout: Sidebar (3 cols) + Main File Explorer (9 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          <!-- ================= LEFT SIDEBAR (CLOUDREVE STYLE) ================= -->
+          <div class="lg:col-span-3 xl:col-span-3 apple-glass-card p-4 flex flex-col justify-between space-y-4">
+            
+            <!-- Category Navigation -->
+            <div class="space-y-1">
+              <!-- My Files -->
+              <button 
+                @click="selectedStorageCategory = 'all'" 
+                :class="selectedStorageCategory === 'all' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-solid fa-folder-closed text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'all' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>My Files</span>
+                </div>
+                <span class="text-[11px] font-mono tabular-nums opacity-60">{{ categoryCounts.all }}</span>
+              </button>
 
-              <div class="my-6">
-                <div class="flex items-baseline justify-between mb-2">
-                  <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">{{ storageDisk.usedGB }}</span>
-                  <span class="text-sm text-[#8e8e93] font-mono">/ {{ storageDisk.totalGB }} GB ({{ storageDisk.percent }}%)</span>
+              <!-- Photos -->
+              <button 
+                @click="selectedStorageCategory = 'photos'" 
+                :class="selectedStorageCategory === 'photos' ? 'bg-[#30d158]/15 text-[#30d158] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-regular fa-image text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'photos' ? 'text-[#30d158]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Photos</span>
                 </div>
-                <div class="w-full h-2 rounded-full bg-[#2c2c2e] overflow-hidden">
-                  <div class="h-full bg-[#0a84ff] rounded-full transition-all" :style="{ width: storageDisk.percent + '%' }"></div>
-                </div>
-              </div>
+                <span class="text-[11px] font-mono tabular-nums opacity-60">{{ categoryCounts.photos }}</span>
+              </button>
 
-              <div class="space-y-2 text-xs text-[#8e8e93]">
-                <div class="flex justify-between">
-                  <span>Available Space:</span>
-                  <span class="text-white font-mono tabular-nums">{{ storageDisk.availGB }} GB</span>
+              <!-- Videos -->
+              <button 
+                @click="selectedStorageCategory = 'videos'" 
+                :class="selectedStorageCategory === 'videos' ? 'bg-[#ff375f]/15 text-[#ff375f] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-solid fa-video text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'videos' ? 'text-[#ff375f]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Videos</span>
                 </div>
-                <div class="flex justify-between">
-                  <span>Direct Cloudflare Stream:</span>
-                  <span class="text-[#30d158] font-medium">Active (Zero egress fee)</span>
+                <span class="text-[11px] font-mono tabular-nums opacity-60">{{ categoryCounts.videos }}</span>
+              </button>
+
+              <!-- Music -->
+              <button 
+                @click="selectedStorageCategory = 'music'" 
+                :class="selectedStorageCategory === 'music' ? 'bg-[#ff9f0a]/15 text-[#ff9f0a] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-solid fa-music text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'music' ? 'text-[#ff9f0a]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Music</span>
                 </div>
-              </div>
+                <span class="text-[11px] font-mono tabular-nums opacity-60">{{ categoryCounts.music }}</span>
+              </button>
+
+              <!-- Documents -->
+              <button 
+                @click="selectedStorageCategory = 'documents'" 
+                :class="selectedStorageCategory === 'documents' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-regular fa-file-lines text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'documents' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Documents</span>
+                </div>
+                <span class="text-[11px] font-mono tabular-nums opacity-60">{{ categoryCounts.documents }}</span>
+              </button>
+
+              <!-- Shared with me -->
+              <button 
+                @click="selectedStorageCategory = 'shared_with_me'" 
+                :class="selectedStorageCategory === 'shared_with_me' ? 'bg-[#bf5af2]/15 text-[#bf5af2] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-solid fa-users text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'shared_with_me' ? 'text-[#bf5af2]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Shared with me</span>
+                </div>
+              </button>
+
+              <!-- Trash -->
+              <button 
+                @click="selectedStorageCategory = 'trash'" 
+                :class="selectedStorageCategory === 'trash' ? 'bg-[#ff453a]/15 text-[#ff453a] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-regular fa-trash-can text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'trash' ? 'text-[#ff453a]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Trash</span>
+                </div>
+              </button>
             </div>
 
-            <!-- Chunked Upload Dropzone -->
-            <div class="mt-6 pt-4 border-t border-white/[0.06]">
-              <label class="flex flex-col items-center justify-center border-2 border-dashed border-white/15 hover:border-[#0a84ff]/50 rounded-[14px] p-4 cursor-pointer transition-all bg-white/[0.02] hover:bg-[#0a84ff]/[0.05]">
-                <i class="fa-solid fa-cloud-arrow-up text-xl text-[#0a84ff] mb-1.5"></i>
-                <span class="text-xs font-medium text-white">Upload Large File</span>
-                <span class="text-[10px] text-[#8e8e93]">Auto-sliced into 20MB stream chunks</span>
-                <input type="file" class="hidden" @change="handleFileSelected">
-              </label>
-              
-              <!-- Upload Progress Indicator -->
-              <div v-if="uploadStatus.isUploading" class="mt-3 p-3 rounded-[12px] bg-[#0a84ff]/10 border border-[#0a84ff]/25">
-                <div class="flex justify-between text-xs text-[#0a84ff] mb-1 truncate">
-                  <span class="truncate">{{ uploadStatus.fileName }}</span>
-                  <span class="font-mono tabular-nums">{{ uploadStatus.progress }}%</span>
+            <!-- Lower Section: Utilities & Links -->
+            <div class="pt-3 border-t border-white/[0.06] space-y-1">
+              <!-- Shared by me -->
+              <button 
+                @click="selectedStorageCategory = 'shared_by_me'" 
+                :class="selectedStorageCategory === 'shared_by_me' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <i class="fa-solid fa-share-nodes text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'shared_by_me' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                <span>Shared by me</span>
+              </button>
+
+              <!-- Connect & Mount -->
+              <button 
+                @click="selectedStorageCategory = 'connect'" 
+                :class="selectedStorageCategory === 'connect' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <i class="fa-solid fa-hard-drive text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'connect' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                <span>Connect &amp; Mount</span>
+              </button>
+
+              <!-- Background Tasks -->
+              <button 
+                @click="selectedStorageCategory = 'tasks'" 
+                :class="selectedStorageCategory === 'tasks' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <div class="flex items-center gap-3">
+                  <i class="fa-solid fa-list-check text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'tasks' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                  <span>Background Tasks</span>
                 </div>
-                <div class="w-full h-1.5 rounded-full bg-[#1c1c1e] overflow-hidden">
-                  <div class="h-full bg-[#0a84ff] transition-all" :style="{ width: uploadStatus.progress + '%' }"></div>
+                <span v-if="uploadStatus.isUploading" class="w-2 h-2 rounded-full bg-[#0a84ff] animate-ping"></span>
+              </button>
+
+              <!-- Remote Download -->
+              <button 
+                @click="selectedStorageCategory = 'remote_dl'" 
+                :class="selectedStorageCategory === 'remote_dl' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
+                <i class="fa-solid fa-cloud-arrow-down text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'remote_dl' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
+                <span>Remote Download</span>
+              </button>
+
+              <!-- Dashboard Link -->
+              <button 
+                @click="activeTab = 'dashboard'" 
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs text-[#8e8e93] hover:text-white hover:bg-white/[0.04] transition-all text-left group">
+                <i class="fa-solid fa-chart-pie text-sm w-4 text-center text-[#8e8e93] group-hover:text-white transition-colors"></i>
+                <span>Dashboard</span>
+              </button>
+            </div>
+
+            <!-- Bottom Storage Quota Card -->
+            <div class="pt-3 border-t border-white/[0.06]">
+              <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-hard-drive text-xs text-[#8e8e93]"></i>
+                    <span class="text-xs font-semibold text-white">Storage</span>
+                  </div>
+                  <span class="text-[10px] text-[#30d158] font-mono">vps2 NVMe</span>
                 </div>
-                <p class="text-[10px] text-[#0a84ff]/80 mt-1 font-mono">{{ uploadStatus.message }}</p>
+                <div class="w-full h-1.5 rounded-full bg-[#2c2c2e] overflow-hidden">
+                  <div class="h-full bg-[#0a84ff] rounded-full transition-all" :style="{ width: storageDisk.percent + '%' }"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-mono text-[#8e8e93]">
+                  <span>{{ storageDisk.usedGB }} GB</span>
+                  <span>/ {{ storageDisk.totalGB }} GB ({{ storageDisk.percent }}%)</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- File Explorer Table (8 cols) -->
-          <div class="lg:col-span-8 apple-glass-card p-6 flex flex-col justify-between">
+          <!-- ================= RIGHT MAIN FILES EXPLORER ================= -->
+          <div class="lg:col-span-9 xl:col-span-9 apple-glass-card p-6 flex flex-col justify-between min-h-[550px]">
             <div>
-              <!-- Explorer Header & Node Selector -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold text-white tracking-headline">Files Explorer</span>
-                  <span class="text-xs text-[#8e8e93] font-mono">({{ files.length }} items)</span>
+              <!-- Explorer Header: Title, Search, Actions -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
+                <!-- Title & Item Count -->
+                <div class="flex items-center gap-3">
+                  <span class="text-base font-semibold text-white tracking-headline">
+                    {{ currentCategoryTitle }}
+                  </span>
+                  <span class="text-xs text-[#8e8e93] font-mono">({{ filteredFiles.length }} items)</span>
                 </div>
 
-                <!-- Target Node Indicator -->
-                <div class="flex items-center gap-2">
-                  <span class="text-xs text-[#8e8e93] hidden sm:inline">Storage Node:</span>
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-[9px] bg-[#30d158]/15 border border-[#30d158]/25 text-[#30d158] text-xs font-mono font-medium">
-                    <i class="fa-brands fa-ubuntu text-sm"></i>
-                    <span>Ubuntu (vps2)</span>
+                <!-- Search & Actions Bar -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <!-- Search Input -->
+                  <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[#8e8e93]"></i>
+                    <input 
+                      type="text" 
+                      v-model="storageSearchQuery" 
+                      placeholder="Search files..."
+                      class="pl-8 pr-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#0a84ff] w-36 sm:w-48 transition-all">
+                  </div>
+
+                  <!-- Upload Large File Button -->
+                  <label class="px-3.5 py-1.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] text-white text-xs font-semibold shadow-apple-cta cursor-pointer transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                    <span>Upload</span>
+                    <input type="file" class="hidden" @change="handleFileSelected">
+                  </label>
+
+                  <!-- Refresh Button -->
+                  <button 
+                    @click="loadFilesForSelectedServer" 
+                    class="p-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white text-xs transition-all" 
+                    title="Reload files">
+                    <i class="fa-solid fa-rotate-right"></i>
+                  </button>
+
+                  <!-- View Mode Toggle (List vs Grid) -->
+                  <div class="flex items-center bg-white/[0.05] p-0.5 rounded-xl border border-white/10 text-xs">
+                    <button 
+                      @click="storageViewMode = 'list'" 
+                      :class="storageViewMode === 'list' ? 'bg-[#0a84ff] text-white' : 'text-[#8e8e93] hover:text-white'" 
+                      class="p-1.5 rounded-lg transition-all" 
+                      title="List View">
+                      <i class="fa-solid fa-list text-[11px]"></i>
+                    </button>
+                    <button 
+                      @click="storageViewMode = 'grid'" 
+                      :class="storageViewMode === 'grid' ? 'bg-[#0a84ff] text-white' : 'text-[#8e8e93] hover:text-white'" 
+                      class="p-1.5 rounded-lg transition-all" 
+                      title="Grid View">
+                      <i class="fa-solid fa-grip text-[11px]"></i>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <!-- File List -->
-              <div class="overflow-x-auto mt-4">
-                <table class="w-full text-left text-xs">
-                  <thead>
-                    <tr class="text-[#8e8e93] border-b border-white/[0.06]">
-                      <th class="pb-2.5 font-medium">Name</th>
-                      <th class="pb-2.5 font-medium">Size</th>
-                      <th class="pb-2.5 font-medium hidden sm:table-cell">Modified</th>
-                      <th class="pb-2.5 font-medium text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-white/[0.04]">
-                    <tr v-if="files.length === 0">
-                      <td colspan="4" class="py-8 text-center text-[#8e8e93]">
-                        No files on this node drive. Upload one above.
-                      </td>
-                    </tr>
-                    <tr v-for="f in files" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
-                      <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
-                        <i :class="getFileIcon(f.name)"></i>
-                        <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">{{ decodeURIComponent(f.name) }}</span>
-                      </td>
-                      <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
-                        {{ formatBytes(f.size) }}
-                      </td>
-                      <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
-                        {{ formatDate(f.modTime) }}
-                      </td>
-                      <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
-                        <!-- Preview Button -->
-                        <button 
-                          @click="openPreview(f)"
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#0a84ff]/15 hover:bg-[#0a84ff]/30 text-[#0a84ff] transition-all"
-                          title="Preview File">
-                          <i class="fa-solid fa-eye text-[11px]"></i>
-                        </button>
-                        <!-- Public Share Button -->
-                        <button 
-                          @click="openShareModal(f)"
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#ff9f0a]/15 hover:bg-[#ff9f0a]/30 text-[#ff9f0a] transition-all"
-                          title="Share File Publicly">
-                          <i class="fa-solid fa-share-nodes text-[11px]"></i>
-                        </button>
-                        <!-- Download Link -->
-                        <a 
-                          :href="getDownloadUrl(f.name)" 
-                          target="_blank"
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all"
-                          title="Download">
-                          <i class="fa-solid fa-download text-[11px]"></i>
-                        </a>
-                        <!-- Delete Button -->
-                        <button 
-                          @click="deleteFile(f.name)"
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all"
-                          title="Delete">
-                          <i class="fa-solid fa-trash-can text-[11px]"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <!-- Uploading Progress Card -->
+              <div v-if="uploadStatus.isUploading" class="mt-4 p-3.5 rounded-xl bg-[#0a84ff]/10 border border-[#0a84ff]/25">
+                <div class="flex justify-between text-xs text-[#0a84ff] mb-1.5">
+                  <div class="flex items-center gap-2 truncate">
+                    <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                    <span class="font-medium truncate">{{ uploadStatus.fileName }}</span>
+                  </div>
+                  <span class="font-mono tabular-nums font-semibold">{{ uploadStatus.progress }}%</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-[#1c1c1e] overflow-hidden">
+                  <div class="h-full bg-[#0a84ff] transition-all" :style="{ width: uploadStatus.progress + '%' }"></div>
+                </div>
+                <p class="text-[10px] text-[#0a84ff]/80 mt-1.5 font-mono">{{ uploadStatus.message }}</p>
+              </div>
+
+              <!-- Main Views based on selectedStorageCategory -->
+              <div class="mt-4">
+                
+                <!-- Connect & Mount Special View -->
+                <div v-if="selectedStorageCategory === 'connect'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#0a84ff]/15 flex items-center justify-center text-[#0a84ff]">
+                      <i class="fa-solid fa-hard-drive text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-white">Connect &amp; Mount Storage Pool</h4>
+                      <p class="text-xs text-[#8e8e93]">Mount directly via SFTP or cURL to upload large datasets</p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-3 font-mono text-xs">
+                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
+                      <span class="text-[#8e8e93] text-[10px]">SFTP Mount (Linux / macOS / Termius)</span>
+                      <p class="text-[#30d158] select-all">sftp -i ~/.ssh/vlinuxvm_key.pem bachhoang@20.89.130.95:/opt/vps-agent/data/uploads</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
+                      <span class="text-[#8e8e93] text-[10px]">Direct Stream Tunnel Endpoint</span>
+                      <p class="text-[#0a84ff] select-all">https://vps2.hoangngocbach.id.vn</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
+                      <span class="text-[#8e8e93] text-[10px]">cURL Direct Upload Example</span>
+                      <p class="text-[#f5f5f7] select-all">curl -X POST -H "File-Name: backup.zip" --data-binary @backup.zip "https://vps.hoangngocbach.id.vn/api/files/upload-chunk?vps_id=vps2"</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Remote Download Special View -->
+                <div v-else-if="selectedStorageCategory === 'remote_dl'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#30d158]/15 flex items-center justify-center text-[#30d158]">
+                      <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-white">Remote Download (cURL / Wget)</h4>
+                      <p class="text-xs text-[#8e8e93]">Download files directly from public URLs straight to Ubuntu NVMe</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <input 
+                      type="url" 
+                      v-model="remoteDownloadUrl" 
+                      placeholder="https://example.com/dataset.zip" 
+                      class="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#0a84ff]">
+                    <button 
+                      @click="triggerRemoteDownload" 
+                      :disabled="!remoteDownloadUrl || isRemoteDownloading"
+                      class="px-4 py-2 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] text-white text-xs font-semibold transition-all disabled:opacity-50">
+                      <span>{{ isRemoteDownloading ? 'Downloading...' : 'Fetch to VPS' }}</span>
+                    </button>
+                  </div>
+                  <p v-if="remoteDownloadMsg" class="text-xs font-mono" :class="remoteDownloadSuccess ? 'text-[#30d158]' : 'text-[#ff453a]'">
+                    {{ remoteDownloadMsg }}
+                  </p>
+                </div>
+
+                <!-- Background Tasks View -->
+                <div v-else-if="selectedStorageCategory === 'tasks'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
+                  <h4 class="text-sm font-semibold text-white mb-2">Background Operations</h4>
+                  <div v-if="uploadStatus.isUploading" class="p-4 rounded-xl bg-[#0a84ff]/10 border border-[#0a84ff]/25 space-y-2">
+                    <div class="flex justify-between text-xs text-[#0a84ff]">
+                      <span>Active Upload: {{ uploadStatus.fileName }}</span>
+                      <span class="font-mono">{{ uploadStatus.progress }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-[#1c1c1e] overflow-hidden">
+                      <div class="h-full bg-[#0a84ff]" :style="{ width: uploadStatus.progress + '%' }"></div>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8 text-[#8e8e93] text-xs space-y-2">
+                    <i class="fa-solid fa-circle-check text-2xl text-[#30d158]"></i>
+                    <p>All background tasks completed. System idle.</p>
+                  </div>
+                </div>
+
+                <!-- Shared with me View -->
+                <div v-else-if="selectedStorageCategory === 'shared_with_me'" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
+                  <i class="fa-solid fa-users text-2xl text-[#bf5af2] opacity-60"></i>
+                  <p>No files shared with your account yet.</p>
+                </div>
+
+                <!-- Trash View -->
+                <div v-else-if="selectedStorageCategory === 'trash'" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
+                  <i class="fa-regular fa-trash-can text-2xl text-[#ff453a] opacity-60"></i>
+                  <p>Trash is empty. Deleted files are removed permanently.</p>
+                </div>
+
+                <!-- Regular File Categories: all, photos, videos, music, documents, shared_by_me -->
+                <div v-else>
+                  <!-- Empty State -->
+                  <div v-if="filteredFiles.length === 0" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
+                    <i class="fa-regular fa-folder-open text-2xl opacity-40"></i>
+                    <p>No files found in {{ currentCategoryTitle }}.</p>
+                  </div>
+
+                  <!-- 1. Table List View -->
+                  <div v-else-if="storageViewMode === 'list'" class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                      <thead>
+                        <tr class="text-[#8e8e93] border-b border-white/[0.06]">
+                          <th class="pb-2.5 font-medium">Name</th>
+                          <th class="pb-2.5 font-medium">Size</th>
+                          <th class="pb-2.5 font-medium hidden sm:table-cell">Modified</th>
+                          <th class="pb-2.5 font-medium text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-white/[0.04]">
+                        <tr v-for="f in filteredFiles" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
+                          <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
+                            <i :class="getFileIcon(f.name)"></i>
+                            <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">
+                              {{ decodeURIComponent(f.name) }}
+                            </span>
+                          </td>
+                          <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
+                            {{ formatBytes(f.size) }}
+                          </td>
+                          <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
+                            {{ formatDate(f.modTime) }}
+                          </td>
+                          <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
+                            <button @click="openPreview(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#0a84ff]/15 hover:bg-[#0a84ff]/30 text-[#0a84ff] transition-all" title="Preview">
+                              <i class="fa-solid fa-eye text-[11px]"></i>
+                            </button>
+                            <button @click="openShareModal(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#ff9f0a]/15 hover:bg-[#ff9f0a]/30 text-[#ff9f0a] transition-all" title="Share Publicly">
+                              <i class="fa-solid fa-share-nodes text-[11px]"></i>
+                            </button>
+                            <a :href="getDownloadUrl(f.name)" target="_blank" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all" title="Download">
+                              <i class="fa-solid fa-download text-[11px]"></i>
+                            </a>
+                            <button @click="deleteFile(f.name)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all" title="Delete">
+                              <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- 2. Grid Card View -->
+                  <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div 
+                      v-for="f in filteredFiles" 
+                      :key="f.name"
+                      @click="openPreview(f)"
+                      class="p-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-[#0a84ff]/40 cursor-pointer transition-all flex flex-col justify-between group">
+                      <div class="flex items-center justify-between mb-3">
+                        <i :class="getFileIcon(f.name)" class="text-2xl"></i>
+                        <span class="text-[10px] text-[#8e8e93] font-mono">{{ formatBytes(f.size) }}</span>
+                      </div>
+                      <div>
+                        <p class="text-xs text-white font-medium truncate group-hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">
+                          {{ decodeURIComponent(f.name) }}
+                        </p>
+                        <p class="text-[10px] text-[#636366] font-mono mt-1">
+                          {{ formatDate(f.modTime) }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
             </div>
           </div>
+
         </div>
 
       </section>
@@ -2579,6 +2847,92 @@
           failedChunks: []
         });
 
+        // Cloudreve Sidebar Categories & Explorer Controls
+        const selectedStorageCategory = ref('all');
+        const storageSearchQuery = ref('');
+        const storageViewMode = ref('list'); // 'list' | 'grid'
+        const remoteDownloadUrl = ref('');
+        const isRemoteDownloading = ref(false);
+        const remoteDownloadMsg = ref('');
+        const remoteDownloadSuccess = ref(false);
+
+        const currentCategoryTitle = computed(() => {
+          const map = {
+            all: 'My Files',
+            photos: 'Photos',
+            videos: 'Videos',
+            music: 'Music',
+            documents: 'Documents',
+            shared_with_me: 'Shared with me',
+            trash: 'Trash',
+            shared_by_me: 'Shared by me',
+            connect: 'Connect & Mount',
+            tasks: 'Background Tasks',
+            remote_dl: 'Remote Download'
+          };
+          return map[selectedStorageCategory.value] || 'Files Explorer';
+        });
+
+        const categoryCounts = computed(() => {
+          const all = files.value || [];
+          return {
+            all: all.length,
+            photos: all.filter(f => isImageFile(f.name)).length,
+            videos: all.filter(f => isVideoFile(f.name)).length,
+            music: all.filter(f => isAudioFile(f.name)).length,
+            documents: all.filter(f => isPdfFile(f.name) || isDocxFile(f.name) || isExcelFile(f.name) || isMarkdownFile(f.name) || isTextFile(f.name)).length
+          };
+        });
+
+        const filteredFiles = computed(() => {
+          let list = files.value || [];
+          const cat = selectedStorageCategory.value;
+
+          if (cat === 'photos') {
+            list = list.filter(f => isImageFile(f.name));
+          } else if (cat === 'videos') {
+            list = list.filter(f => isVideoFile(f.name));
+          } else if (cat === 'music') {
+            list = list.filter(f => isAudioFile(f.name));
+          } else if (cat === 'documents') {
+            list = list.filter(f => isPdfFile(f.name) || isDocxFile(f.name) || isExcelFile(f.name) || isMarkdownFile(f.name) || isTextFile(f.name));
+          } else if (cat === 'trash' || cat === 'shared_with_me') {
+            return [];
+          }
+
+          if (storageSearchQuery.value.trim()) {
+            const q = storageSearchQuery.value.trim().toLowerCase();
+            list = list.filter(f => (decodeURIComponent(f.name || '')).toLowerCase().includes(q));
+          }
+          return list;
+        });
+
+        async function triggerRemoteDownload() {
+          if (!remoteDownloadUrl.value) return;
+          isRemoteDownloading.value = true;
+          remoteDownloadMsg.value = 'Starting remote download on Ubuntu...';
+          remoteDownloadSuccess.value = false;
+          try {
+            const res = await fetch(`/api/files/remote-download?vps_id=vps2&url=${encodeURIComponent(remoteDownloadUrl.value)}`, {
+              method: 'POST'
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              remoteDownloadSuccess.value = true;
+              remoteDownloadMsg.value = `Downloaded successfully: ${data.file} (${formatBytes(data.size)})`;
+              remoteDownloadUrl.value = '';
+              await loadFilesForSelectedServer();
+            } else {
+              throw new Error(data.error || 'Download failed');
+            }
+          } catch (err) {
+            remoteDownloadSuccess.value = false;
+            remoteDownloadMsg.value = 'Error: ' + err.message;
+          } finally {
+            isRemoteDownloading.value = false;
+          }
+        }
+
         async function loadFilesForSelectedServer() {
           try {
             const res = await fetch('/api/files/list?vps_id=vps2');
@@ -3281,6 +3635,17 @@
           currentStorageServer,
           storageDisk,
           files,
+          selectedStorageCategory,
+          storageSearchQuery,
+          storageViewMode,
+          remoteDownloadUrl,
+          isRemoteDownloading,
+          remoteDownloadMsg,
+          remoteDownloadSuccess,
+          currentCategoryTitle,
+          categoryCounts,
+          filteredFiles,
+          triggerRemoteDownload,
           uploadStatus,
           loadFilesForSelectedServer,
           handleFileSelected,

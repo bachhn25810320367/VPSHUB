@@ -341,3 +341,56 @@ func (sm *StorageManager) HandleInspectArchive(w http.ResponseWriter, r *http.Re
 		"total":   len(entries),
 	})
 }
+
+// HandleRemoteDownload downloads a file from URL directly to uploadDir
+func (sm *StorageManager) HandleRemoteDownload(w http.ResponseWriter, r *http.Request) {
+	targetURL := r.URL.Query().Get("url")
+	if targetURL == "" {
+		http.Error(w, `{"error":"URL is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	parsed, err := url.Parse(targetURL)
+	if err != nil {
+		http.Error(w, `{"error":"Invalid URL"}`, http.StatusBadRequest)
+		return
+	}
+
+	fileName := filepath.Base(parsed.Path)
+	if fileName == "" || fileName == "/" || fileName == "." {
+		fileName = fmt.Sprintf("download_%d.bin", time.Now().Unix())
+	}
+
+	outPath := filepath.Join(sm.uploadDir, fileName)
+	resp, err := http.Get(targetURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Failed to fetch URL: %v"}`, err), http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Sprintf(`{"error":"Remote server returned status %d"}`, resp.StatusCode), http.StatusBadRequest)
+		return
+	}
+
+	out, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Failed to create file: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	defer out.Close()
+
+	written, err := io.Copy(out, resp.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Failed to save file: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"file":    fileName,
+		"size":    written,
+	})
+}

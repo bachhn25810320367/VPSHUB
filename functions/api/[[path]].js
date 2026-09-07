@@ -780,6 +780,24 @@ export async function onRequest(context) {
     } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
   }
 
+  // 6g. POST /api/files/remote-download (Download remote URL to server)
+  if (path === "/api/files/remote-download" && method === "POST") {
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const remoteUrl = url.searchParams.get("url") || "";
+    if (!remoteUrl) return jsonResponse({ error: "Missing URL parameter" }, 400);
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/remote-download?url=${encodeURIComponent(remoteUrl)}`, {
+        headers: { "X-Agent-Secret": secret }
+      });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
+  }
+
   // 7. GET /api/servers
   if (path === "/api/servers" && method === "GET") {
     return jsonResponse(DEFAULT_SERVERS);
