@@ -52,21 +52,6 @@ const memoryStore = {
       network: { bytes_recv: 2150000000, bytes_sent: 820000000, speed_rx_bps: 920000, speed_tx_bps: 230000 },
       last_seen: Math.floor(Date.now() / 1000)
     },
-    {
-      id: "vps3",
-      name: "vps3 (Debian)",
-      os: "linux",
-      ip: "20.89.131.102",
-      location: "Southeast Asia",
-      tunnel_url: "https://vps3.hoangngocbach.id.vn",
-      is_online: true,
-      pingMs: 18,
-      cpu_percent: 0.9,
-      memory: { total: 1073741824, used: 145000000, free: 928741824, percent: 13.5 },
-      disk: { total: 32212254720, used: 5200000000, free: 27012254720, percent: 16.1 },
-      network: { bytes_recv: 980000000, bytes_sent: 410000000, speed_rx_bps: 340000, speed_tx_bps: 120000 },
-      last_seen: Math.floor(Date.now() / 1000)
-    }
   ],
   expenses: [
     {
@@ -88,17 +73,6 @@ const memoryStore = {
       currency: "VND",
       billingCycle: "monthly",
       dueDate: "2026-09-25",
-      status: "unpaid",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "exp-3",
-      category: "VPS",
-      title: "VPS 3 (Debian 12 - Storage Worker)",
-      amount: 140000,
-      currency: "VND",
-      billingCycle: "monthly",
-      dueDate: "2026-10-02",
       status: "unpaid",
       createdAt: new Date().toISOString()
     },
@@ -190,12 +164,10 @@ const server = http.createServer(async (req, res) => {
         ram: {
           vps1: [94.8, 95.1, 95.4, 94.9, 95.2, 95.6, 95.0, 95.3, 95.5, 95.1, 94.8, 95.2, 95.7, 95.3, 94.9, 95.1, 95.4, 95.2, 95.0, memoryStore.servers[0].memory.percent],
           vps2: [52.8, 53.1, 53.5, 53.0, 53.4, 53.8, 53.2, 53.6, 53.4, 53.1, 52.9, 53.3, 53.7, 53.4, 53.0, 53.2, 53.6, 53.5, 53.2, memoryStore.servers[1].memory.percent],
-          vps3: [47.5, 47.8, 48.2, 47.9, 48.0, 48.3, 47.7, 48.1, 47.9, 47.6, 47.4, 47.9, 48.2, 48.0, 47.7, 47.8, 48.1, 48.0, 47.8, memoryStore.servers[2].memory.percent]
         },
         cpu: {
           vps1: [1.2, 1.5, 1.8, 1.4, 1.6, 2.1, 1.5, 1.7, 1.9, 1.3, 1.5, 1.8, 2.2, 1.6, 1.4, 1.7, 1.9, 1.5, 1.3, memoryStore.servers[0].cpu_percent],
           vps2: [0.2, 0.3, 0.4, 0.3, 0.2, 0.4, 0.3, 0.3, 0.4, 0.2, 0.3, 0.4, 0.5, 0.3, 0.2, 0.3, 0.4, 0.3, 0.2, memoryStore.servers[1].cpu_percent],
-          vps3: [0.4, 0.5, 0.6, 0.5, 0.4, 0.6, 0.5, 0.6, 0.7, 0.5, 0.4, 0.5, 0.7, 0.6, 0.5, 0.5, 0.6, 0.5, 0.4, memoryStore.servers[2].cpu_percent]
         },
         bandwidth: {
           rx: [1.2, 1.4, 1.6, 1.5, 1.3, 1.7, 1.5, 1.6, 1.8, 1.4, 1.3, 1.5, 1.9, 1.6, 1.4, 1.5, 1.7, 1.6, 1.4, currentRxMbps],
@@ -207,12 +179,10 @@ const server = http.createServer(async (req, res) => {
         ram: {
           vps1: [93.5, 94.2, 95.6, 94.8, 95.1, 95.5, memoryStore.servers[0].memory.percent],
           vps2: [51.8, 52.4, 53.9, 53.0, 52.7, 53.6, memoryStore.servers[1].memory.percent],
-          vps3: [46.8, 47.2, 48.5, 48.0, 47.4, 48.1, memoryStore.servers[2].memory.percent]
         },
         cpu: {
           vps1: [1.2, 1.5, 2.4, 1.8, 1.4, 1.6, memoryStore.servers[0].cpu_percent],
           vps2: [0.2, 0.3, 0.5, 0.4, 0.2, 0.3, memoryStore.servers[1].cpu_percent],
-          vps3: [0.4, 0.5, 0.8, 0.6, 0.4, 0.5, memoryStore.servers[2].cpu_percent]
         },
         bandwidth: {
           rx: [1.1, 1.4, 2.5, 1.9, 1.4, 1.7, currentRxMbps],
@@ -224,12 +194,10 @@ const server = http.createServer(async (req, res) => {
         ram: {
           vps1: [88.2, 91.5, 96.8, 97.2, 95.9, 94.8, memoryStore.servers[0].memory.percent],
           vps2: [48.5, 51.0, 58.4, 55.8, 54.0, 53.1, memoryStore.servers[1].memory.percent],
-          vps3: [44.0, 45.6, 51.8, 49.8, 48.5, 47.5, memoryStore.servers[2].memory.percent]
         },
         cpu: {
           vps1: [0.9, 1.3, 5.8, 3.4, 2.1, 1.4, memoryStore.servers[0].cpu_percent],
           vps2: [0.2, 0.3, 2.4, 1.5, 0.8, 0.3, memoryStore.servers[1].cpu_percent],
-          vps3: [0.3, 0.4, 1.9, 1.1, 0.7, 0.4, memoryStore.servers[2].cpu_percent]
         },
         bandwidth: {
           rx: [0.7, 1.1, 4.8, 3.4, 2.2, 1.6, currentRxMbps],
@@ -241,12 +209,10 @@ const server = http.createServer(async (req, res) => {
         ram: {
           vps1: [82.4, 85.0, 92.6, 96.5, 95.0, 93.5, memoryStore.servers[0].memory.percent],
           vps2: [42.0, 43.8, 52.5, 58.2, 55.0, 51.2, memoryStore.servers[1].memory.percent],
-          vps3: [38.5, 40.0, 47.8, 52.0, 49.2, 46.0, memoryStore.servers[2].memory.percent]
         },
         cpu: {
           vps1: [0.5, 0.4, 1.8, 7.5, 4.8, 2.2, memoryStore.servers[0].cpu_percent],
           vps2: [0.1, 0.1, 0.9, 3.8, 2.4, 0.8, memoryStore.servers[1].cpu_percent],
-          vps3: [0.2, 0.2, 0.8, 2.1, 1.5, 0.6, memoryStore.servers[2].cpu_percent]
         },
         bandwidth: {
           rx: [0.4, 0.3, 1.7, 7.1, 5.2, 2.5, currentRxMbps],
@@ -258,12 +224,10 @@ const server = http.createServer(async (req, res) => {
         ram: {
           vps1: [78.0, 83.5, 89.2, 95.8, 96.4, 93.8, memoryStore.servers[0].memory.percent],
           vps2: [39.2, 44.0, 48.6, 54.2, 56.8, 50.5, memoryStore.servers[1].memory.percent],
-          vps3: [35.0, 38.5, 42.8, 48.0, 49.8, 44.8, memoryStore.servers[2].memory.percent]
         },
         cpu: {
           vps1: [3.8, 4.9, 5.2, 6.1, 4.4, 1.8, memoryStore.servers[0].cpu_percent],
           vps2: [1.8, 2.4, 2.8, 3.2, 2.1, 0.8, memoryStore.servers[1].cpu_percent],
-          vps3: [1.1, 1.4, 1.5, 1.9, 1.3, 0.6, memoryStore.servers[2].cpu_percent]
         },
         bandwidth: {
           rx: [4.8, 5.7, 5.1, 6.3, 4.2, 1.6, currentRxMbps],

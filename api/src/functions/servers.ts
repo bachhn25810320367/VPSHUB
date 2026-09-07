@@ -22,17 +22,6 @@ const SERVERS_CONFIG = [
     quotaGB: 100,
     ramMB: 1024,
     cpuCores: "1 Core / 2 Threads (EPYC 7763)"
-  },
-  {
-    id: "vps3",
-    name: "VPS 3 (Debian)",
-    os: "Debian 12",
-    ip: "Worker",
-    location: "Southeast Asia",
-    tunnelUrl: "https://vps3.hoangngocbach.id.vn",
-    quotaGB: 100,
-    ramMB: 1024,
-    cpuCores: "1 Core / 2 Threads (EPYC 7763)"
   }
 ];
 
