@@ -833,56 +833,6 @@
               </button>
             </div>
 
-            <!-- Lower Section: Utilities & Links -->
-            <div class="pt-3 border-t border-white/[0.06] space-y-1">
-              <!-- Shared by me -->
-              <button 
-                @click="selectedStorageCategory = 'shared_by_me'" 
-                :class="selectedStorageCategory === 'shared_by_me' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
-                <i class="fa-solid fa-share-nodes text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'shared_by_me' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
-                <span>Shared by me</span>
-              </button>
-
-              <!-- Connect & Mount -->
-              <button 
-                @click="selectedStorageCategory = 'connect'" 
-                :class="selectedStorageCategory === 'connect' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
-                <i class="fa-solid fa-hard-drive text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'connect' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
-                <span>Connect &amp; Mount</span>
-              </button>
-
-              <!-- Background Tasks -->
-              <button 
-                @click="selectedStorageCategory = 'tasks'" 
-                :class="selectedStorageCategory === 'tasks' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
-                class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
-                <div class="flex items-center gap-3">
-                  <i class="fa-solid fa-list-check text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'tasks' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
-                  <span>Background Tasks</span>
-                </div>
-                <span v-if="uploadStatus.isUploading" class="w-2 h-2 rounded-full bg-[#0a84ff] animate-ping"></span>
-              </button>
-
-              <!-- Remote Download -->
-              <button 
-                @click="selectedStorageCategory = 'remote_dl'" 
-                :class="selectedStorageCategory === 'remote_dl' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
-                <i class="fa-solid fa-cloud-arrow-down text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'remote_dl' ? 'text-[#0a84ff]' : 'text-[#8e8e93] group-hover:text-white'"></i>
-                <span>Remote Download</span>
-              </button>
-
-              <!-- Dashboard Link -->
-              <button 
-                @click="activeTab = 'dashboard'" 
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs text-[#8e8e93] hover:text-white hover:bg-white/[0.04] transition-all text-left group">
-                <i class="fa-solid fa-chart-pie text-sm w-4 text-center text-[#8e8e93] group-hover:text-white transition-colors"></i>
-                <span>Dashboard</span>
-              </button>
-            </div>
-
             <!-- Bottom Storage Quota Card -->
             <div class="pt-3 border-t border-white/[0.06]">
               <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
@@ -1011,83 +961,8 @@
               <!-- Main Views based on selectedStorageCategory -->
               <div class="mt-4">
                 
-                <!-- Connect & Mount Special View -->
-                <div v-if="selectedStorageCategory === 'connect'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-5">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-[#72b6fc]/15 flex items-center justify-center text-[#72b6fc]">
-                      <i class="fa-solid fa-hard-drive text-lg"></i>
-                    </div>
-                    <div>
-                      <h4 class="text-sm font-semibold text-white">Connect &amp; Mount Storage Pool</h4>
-                      <p class="text-xs text-[#8e8e93]">Mount directly via SFTP or cURL to upload large datasets</p>
-                    </div>
-                  </div>
-
-                  <div class="space-y-3 font-mono text-xs">
-                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
-                      <span class="text-[#8e8e93] text-[10px]">SFTP Mount (Linux / macOS / Termius)</span>
-                      <p class="text-[#30d158] select-all">sftp -i ~/.ssh/vlinuxvm_key.pem bachhoang@20.89.130.95:/opt/vps-agent/data/uploads</p>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
-                      <span class="text-[#8e8e93] text-[10px]">Direct Stream Tunnel Endpoint</span>
-                      <p class="text-[#72b6fc] select-all">https://vps2.hoangngocbach.id.vn</p>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
-                      <span class="text-[#8e8e93] text-[10px]">cURL Direct Upload Example</span>
-                      <p class="text-[#f5f5f7] select-all">curl -X POST -H "File-Name: backup.zip" --data-binary @backup.zip "https://vps.hoangngocbach.id.vn/api/files/upload-chunk?vps_id=vps2"</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Remote Download Special View -->
-                <div v-else-if="selectedStorageCategory === 'remote_dl'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-[#30d158]/15 flex items-center justify-center text-[#30d158]">
-                      <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
-                    </div>
-                    <div>
-                      <h4 class="text-sm font-semibold text-white">Remote Download (cURL / Wget)</h4>
-                      <p class="text-xs text-[#8e8e93]">Download files directly from public URLs straight to Ubuntu NVMe</p>
-                    </div>
-                  </div>
-                  <div class="flex gap-2">
-                    <input 
-                      type="url" 
-                      v-model="remoteDownloadUrl" 
-                      placeholder="https://example.com/dataset.zip" 
-                      class="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc]">
-                    <button 
-                      @click="triggerRemoteDownload" 
-                      :disabled="!remoteDownloadUrl || isRemoteDownloading"
-                      class="px-4 py-2 rounded-xl bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold transition-all disabled:opacity-50">
-                      <span>{{ isRemoteDownloading ? 'Downloading...' : 'Fetch to VPS' }}</span>
-                    </button>
-                  </div>
-                  <p v-if="remoteDownloadMsg" class="text-xs font-mono" :class="remoteDownloadSuccess ? 'text-[#30d158]' : 'text-[#ff453a]'">
-                    {{ remoteDownloadMsg }}
-                  </p>
-                </div>
-
-                <!-- Background Tasks View -->
-                <div v-else-if="selectedStorageCategory === 'tasks'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
-                  <h4 class="text-sm font-semibold text-white mb-2">Background Operations</h4>
-                  <div v-if="uploadStatus.isUploading" class="p-4 rounded-xl bg-[#0a84ff]/10 border border-[#0a84ff]/25 space-y-2">
-                    <div class="flex justify-between text-xs text-[#0a84ff]">
-                      <span>Active Upload: {{ uploadStatus.fileName }}</span>
-                      <span class="font-mono">{{ uploadStatus.progress }}%</span>
-                    </div>
-                    <div class="w-full h-1.5 rounded-full bg-[#1c1c1e] overflow-hidden">
-                      <div class="h-full bg-[#0a84ff]" :style="{ width: uploadStatus.progress + '%' }"></div>
-                    </div>
-                  </div>
-                  <div v-else class="text-center py-8 text-[#8e8e93] text-xs space-y-2">
-                    <i class="fa-solid fa-circle-check text-2xl text-[#30d158]"></i>
-                    <p>All background tasks completed. System idle.</p>
-                  </div>
-                </div>
-
                 <!-- Shared with me View -->
-                <div v-else-if="selectedStorageCategory === 'shared_with_me'" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
+                <div v-if="selectedStorageCategory === 'shared_with_me'" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
                   <i class="fa-solid fa-users text-2xl text-[#bf5af2] opacity-60"></i>
                   <p>No files shared with your account yet.</p>
                 </div>
