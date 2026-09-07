@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +21,57 @@ type FileItem struct {
 	Name    string    `json:"name"`
 	Size    int64     `json:"size"`
 	ModTime time.Time `json:"mod_time"`
+	Snippet string    `json:"snippet,omitempty"`
+}
+
+var tagRegex = regexp.MustCompile(`<[^>]+>`)
+
+func extractSnippet(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".docx" {
+		r, err := zip.OpenReader(path)
+		if err != nil {
+			return ""
+		}
+		defer r.Close()
+		for _, f := range r.File {
+			if f.Name == "word/document.xml" {
+				rc, err := f.Open()
+				if err != nil {
+					return ""
+				}
+				defer rc.Close()
+				buf := make([]byte, 4096)
+				n, _ := io.ReadFull(rc, buf)
+				if n == 0 {
+					return ""
+				}
+				txt := tagRegex.ReplaceAllString(string(buf[:n]), " ")
+				fields := strings.Fields(txt)
+				res := strings.Join(fields, " ")
+				if len(res) > 300 {
+					res = res[:300] + "..."
+				}
+				return res
+			}
+		}
+	} else if ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".sh" || ext == ".py" || ext == ".js" || ext == ".html" {
+		f, err := os.Open(path)
+		if err != nil {
+			return ""
+		}
+		defer f.Close()
+		buf := make([]byte, 300)
+		n, _ := f.Read(buf)
+		if n > 0 {
+			res := strings.TrimSpace(string(buf[:n]))
+			if len(res) > 300 {
+				res = res[:300] + "..."
+			}
+			return res
+		}
+	}
+	return ""
 }
 
 type StorageManager struct {
@@ -184,10 +237,12 @@ func (sm *StorageManager) HandleListFiles(w http.ResponseWriter, r *http.Request
 		if err != nil {
 			continue
 		}
+		snippet := extractSnippet(filepath.Join(sm.uploadDir, entry.Name()))
 		files = append(files, FileItem{
 			Name:    entry.Name(),
 			Size:    info.Size(),
 			ModTime: info.ModTime(),
+			Snippet: snippet,
 		})
 	}
 

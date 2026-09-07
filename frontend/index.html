@@ -907,60 +907,89 @@
           <!-- ================= RIGHT MAIN FILES EXPLORER ================= -->
           <div class="lg:col-span-9 xl:col-span-9 apple-glass-card p-6 flex flex-col justify-between min-h-[550px]">
             <div>
-              <!-- Explorer Header: Title, Search, Actions -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
-                <!-- Title & Item Count -->
-                <div class="flex items-center gap-3">
-                  <span class="text-base font-semibold text-white tracking-headline">
-                    {{ currentCategoryTitle }}
-                  </span>
-                  <span class="text-xs text-[#8e8e93] font-mono">({{ filteredFiles.length }} items)</span>
+              <!-- Explorer Top Action Bar (Proton Drive Style) -->
+              <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
+                
+                <!-- Left: + New Pill Button -->
+                <div class="flex items-center gap-2.5">
+                  <label class="px-4 py-2 rounded-full bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold shadow-md cursor-pointer transition-all flex items-center gap-2 select-none active:scale-95">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>New</span>
+                    <input type="file" class="hidden" @change="handleFileSelected">
+                  </label>
                 </div>
 
-                <!-- Search & Actions Bar -->
-                <div class="flex flex-wrap items-center gap-2.5">
-                  <!-- Search Input -->
+                <!-- Center: Location Breadcrumb OR Floating Selection Bar -->
+                <div class="flex-1 flex justify-center">
+                  <!-- Floating Selection Bar (when items are selected) -->
+                  <div v-if="selectedFileNames.size > 0" class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#202124] border border-white/10 shadow-2xl text-xs text-white">
+                    <button @click="clearSelection" class="text-[#8e8e93] hover:text-white transition-colors" title="Clear Selection">
+                      <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                    <span class="font-medium whitespace-nowrap">{{ selectedFileNames.size }} selected</span>
+                    <div class="w-px h-3.5 bg-white/20"></div>
+                    <!-- Open in Preview -->
+                    <button v-if="selectedFileNames.size === 1" @click="openPreview(selectedFiles[0])" class="text-[#8e8e93] hover:text-[#72b6fc] transition-colors p-1" title="Open Preview">
+                      <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </button>
+                    <!-- Download -->
+                    <button @click="downloadSelectedFiles" class="text-[#8e8e93] hover:text-[#72b6fc] transition-colors p-1" title="Download">
+                      <i class="fa-solid fa-download text-xs"></i>
+                    </button>
+                    <!-- Share -->
+                    <button v-if="selectedFileNames.size === 1" @click="openShareModal(selectedFiles[0])" class="text-[#8e8e93] hover:text-[#72b6fc] transition-colors p-1" title="Share Publicly">
+                      <i class="fa-solid fa-share-nodes text-xs"></i>
+                    </button>
+                    <!-- Delete -->
+                    <button @click="deleteSelectedFiles" class="text-[#8e8e93] hover:text-[#ff453a] transition-colors p-1" title="Delete">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                  </div>
+
+                  <!-- Location Badge (when no selection) -->
+                  <div v-else class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white font-medium">
+                    <i class="fa-solid fa-house text-xs text-[#72b6fc]"></i>
+                    <span>{{ currentCategoryTitle }}</span>
+                    <span class="text-[11px] text-[#8e8e93] font-mono">({{ filteredFiles.length }})</span>
+                  </div>
+                </div>
+
+                <!-- Right: Search, View Mode Toggle, Refresh -->
+                <div class="flex items-center gap-2">
                   <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[#8e8e93]"></i>
                     <input 
                       type="text" 
                       v-model="storageSearchQuery" 
-                      placeholder="Search files..."
-                      class="pl-8 pr-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#0a84ff] w-36 sm:w-48 transition-all">
+                      placeholder="Search..."
+                      class="pl-8 pr-3 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc] w-32 sm:w-44 transition-all">
                   </div>
 
-                  <!-- Upload Large File Button -->
-                  <label class="px-3.5 py-1.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] text-white text-xs font-semibold shadow-apple-cta cursor-pointer transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
-                    <span>Upload</span>
-                    <input type="file" class="hidden" @change="handleFileSelected">
-                  </label>
-
-                  <!-- Refresh Button -->
-                  <button 
-                    @click="loadFilesForSelectedServer" 
-                    class="p-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white text-xs transition-all" 
-                    title="Reload files">
-                    <i class="fa-solid fa-rotate-right"></i>
-                  </button>
-
-                  <!-- View Mode Toggle (List vs Grid) -->
-                  <div class="flex items-center bg-white/[0.05] p-0.5 rounded-xl border border-white/10 text-xs">
-                    <button 
-                      @click="storageViewMode = 'list'" 
-                      :class="storageViewMode === 'list' ? 'bg-[#0a84ff] text-white' : 'text-[#8e8e93] hover:text-white'" 
-                      class="p-1.5 rounded-lg transition-all" 
-                      title="List View">
-                      <i class="fa-solid fa-list text-[11px]"></i>
-                    </button>
+                  <!-- Mode Toggle (List / Grid) -->
+                  <div class="flex items-center bg-[#202124] p-0.5 rounded-full border border-white/10 text-xs">
                     <button 
                       @click="storageViewMode = 'grid'" 
-                      :class="storageViewMode === 'grid' ? 'bg-[#0a84ff] text-white' : 'text-[#8e8e93] hover:text-white'" 
-                      class="p-1.5 rounded-lg transition-all" 
+                      :class="storageViewMode === 'grid' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
+                      class="p-1.5 px-2.5 rounded-full transition-all" 
                       title="Grid View">
                       <i class="fa-solid fa-grip text-[11px]"></i>
                     </button>
+                    <button 
+                      @click="storageViewMode = 'list'" 
+                      :class="storageViewMode === 'list' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
+                      class="p-1.5 px-2.5 rounded-full transition-all" 
+                      title="List View">
+                      <i class="fa-solid fa-list text-[11px]"></i>
+                    </button>
                   </div>
+
+                  <!-- Refresh -->
+                  <button 
+                    @click="loadFilesForSelectedServer" 
+                    class="p-2 rounded-full bg-[#202124] hover:bg-white/10 text-[#8e8e93] hover:text-white text-xs transition-all" 
+                    title="Reload files">
+                    <i class="fa-solid fa-rotate-right text-[11px]"></i>
+                  </button>
                 </div>
               </div>
 
@@ -985,7 +1014,7 @@
                 <!-- Connect & Mount Special View -->
                 <div v-if="selectedStorageCategory === 'connect'" class="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-5">
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-[#0a84ff]/15 flex items-center justify-center text-[#0a84ff]">
+                    <div class="w-10 h-10 rounded-xl bg-[#72b6fc]/15 flex items-center justify-center text-[#72b6fc]">
                       <i class="fa-solid fa-hard-drive text-lg"></i>
                     </div>
                     <div>
@@ -1001,7 +1030,7 @@
                     </div>
                     <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
                       <span class="text-[#8e8e93] text-[10px]">Direct Stream Tunnel Endpoint</span>
-                      <p class="text-[#0a84ff] select-all">https://vps2.hoangngocbach.id.vn</p>
+                      <p class="text-[#72b6fc] select-all">https://vps2.hoangngocbach.id.vn</p>
                     </div>
                     <div class="p-3.5 rounded-xl bg-[#141416] border border-white/10 space-y-1">
                       <span class="text-[#8e8e93] text-[10px]">cURL Direct Upload Example</span>
@@ -1026,11 +1055,11 @@
                       type="url" 
                       v-model="remoteDownloadUrl" 
                       placeholder="https://example.com/dataset.zip" 
-                      class="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#0a84ff]">
+                      class="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc]">
                     <button 
                       @click="triggerRemoteDownload" 
                       :disabled="!remoteDownloadUrl || isRemoteDownloading"
-                      class="px-4 py-2 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] text-white text-xs font-semibold transition-all disabled:opacity-50">
+                      class="px-4 py-2 rounded-xl bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold transition-all disabled:opacity-50">
                       <span>{{ isRemoteDownloading ? 'Downloading...' : 'Fetch to VPS' }}</span>
                     </button>
                   </div>
@@ -1082,6 +1111,7 @@
                     <table class="w-full text-left text-xs">
                       <thead>
                         <tr class="text-[#8e8e93] border-b border-white/[0.06]">
+                          <th class="w-8 pb-2.5"></th>
                           <th class="pb-2.5 font-medium">Name</th>
                           <th class="pb-2.5 font-medium">Size</th>
                           <th class="pb-2.5 font-medium hidden sm:table-cell">Modified</th>
@@ -1089,10 +1119,24 @@
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-white/[0.04]">
-                        <tr v-for="f in filteredFiles" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
+                        <tr 
+                          v-for="f in filteredFiles" 
+                          :key="f.name" 
+                          @click="toggleSelectFile(f)"
+                          @dblclick="openPreview(f)"
+                          :class="isSelected(f) ? 'bg-[#243345]/50' : 'hover:bg-white/[0.03]'" 
+                          class="transition-colors group cursor-pointer">
+                          <td class="py-3 pl-1 pr-2">
+                            <div 
+                              @click.stop="toggleSelectFile(f)"
+                              :class="isSelected(f) ? 'bg-[#72b6fc] text-[#121316]' : 'border border-white/30 group-hover:border-white/60 text-transparent'"
+                              class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all">
+                              <i class="fa-solid fa-check"></i>
+                            </div>
+                          </td>
                           <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
                             <i :class="getFileIcon(f.name)"></i>
-                            <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">
+                            <span class="text-white font-medium truncate group-hover:text-[#72b6fc] transition-colors" :title="decodeURIComponent(f.name)">
                               {{ decodeURIComponent(f.name) }}
                             </span>
                           </td>
@@ -1102,11 +1146,11 @@
                           <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
                             {{ formatDate(f.modTime) }}
                           </td>
-                          <td class="py-3 text-right space-x-1.5 whitespace-nowrap">
-                            <button @click="openPreview(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#0a84ff]/15 hover:bg-[#0a84ff]/30 text-[#0a84ff] transition-all" title="Preview">
+                          <td class="py-3 text-right space-x-1.5 whitespace-nowrap" @click.stop>
+                            <button @click="openPreview(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#72b6fc]/20 text-[#8e8e93] hover:text-[#72b6fc] transition-all" title="Preview">
                               <i class="fa-solid fa-eye text-[11px]"></i>
                             </button>
-                            <button @click="openShareModal(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-[#ff9f0a]/15 hover:bg-[#ff9f0a]/30 text-[#ff9f0a] transition-all" title="Share Publicly">
+                            <button @click="openShareModal(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff9f0a]/20 text-[#8e8e93] hover:text-[#ff9f0a] transition-all" title="Share Publicly">
                               <i class="fa-solid fa-share-nodes text-[11px]"></i>
                             </button>
                             <a :href="getDownloadUrl(f.name)" target="_blank" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all" title="Download">
@@ -1121,25 +1165,124 @@
                     </table>
                   </div>
 
-                  <!-- 2. Grid Card View -->
-                  <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <!-- 2. Grid Card View (Proton Drive Style) -->
+                  <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div 
                       v-for="f in filteredFiles" 
                       :key="f.name"
-                      @click="openPreview(f)"
-                      class="p-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-[#0a84ff]/40 cursor-pointer transition-all flex flex-col justify-between group">
-                      <div class="flex items-center justify-between mb-3">
-                        <i :class="getFileIcon(f.name)" class="text-2xl"></i>
-                        <span class="text-[10px] text-[#8e8e93] font-mono">{{ formatBytes(f.size) }}</span>
-                      </div>
-                      <div>
-                        <p class="text-xs text-white font-medium truncate group-hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">
+                      @click="toggleSelectFile(f)"
+                      @dblclick="openPreview(f)"
+                      :class="isSelected(f) ? 'bg-[#243345] border-[#72b6fc] shadow-[0_4px_20px_rgba(114,182,252,0.18)] ring-1 ring-[#72b6fc]' : 'bg-[#1a1b20] border-white/[0.08] hover:bg-[#202229] hover:border-white/20'"
+                      class="rounded-2xl p-3.5 border transition-all cursor-pointer select-none flex flex-col justify-between group relative min-h-[260px]">
+                      
+                      <!-- Card Header: Checkbox Badge + Truncated Title -->
+                      <div class="flex items-center gap-2 mb-2">
+                        <div 
+                          @click.stop="toggleSelectFile(f)"
+                          :class="isSelected(f) ? 'bg-[#72b6fc] text-[#121316]' : 'border border-white/30 group-hover:border-white/60 text-transparent opacity-0 group-hover:opacity-100'"
+                          class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shadow-sm flex-shrink-0">
+                          <i class="fa-solid fa-check"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-white tracking-wide truncate flex-1 uppercase" :title="decodeURIComponent(f.name)">
                           {{ decodeURIComponent(f.name) }}
-                        </p>
-                        <p class="text-[10px] text-[#636366] font-mono mt-1">
-                          {{ formatDate(f.modTime) }}
-                        </p>
+                        </span>
                       </div>
+
+                      <!-- Inset Preview Thumbnail Container -->
+                      <div class="w-full my-2 rounded-xl overflow-hidden aspect-[4/3] relative flex items-center justify-center transition-transform group-hover:scale-[1.01] bg-[#121316] border border-white/[0.04]">
+                        
+                        <!-- Image thumbnail -->
+                        <img 
+                          v-if="isImageFile(f.name)" 
+                          :src="getPreviewUrl(f.name)" 
+                          class="w-full h-full object-cover rounded-xl"
+                          loading="lazy">
+
+                        <!-- Word DOCX Page Preview (Matches screenshot exactly!) -->
+                        <div 
+                          v-else-if="isDocxFile(f.name)" 
+                          class="w-full h-full bg-white text-black p-3 rounded-xl shadow-inner font-serif text-[8px] leading-tight overflow-hidden flex flex-col justify-between text-left select-none pointer-events-none">
+                          <div v-if="f.name.includes('CƯƠNG')" class="space-y-1">
+                            <p class="text-[#d32f2f] font-semibold text-[7.5px] leading-snug">Chương 3 Phân tích các em sử dụng draw.io · Chương 4 Thiết kế các em sử dụng Figma. Tất cả các bài phải có file vẽ trên máy tính, nếu ko có file vẽ trên máy tính sẽ không được đi thi!</p>
+                            <p class="font-bold text-center text-[9px] uppercase border-b border-black/20 pb-0.5 mt-1 tracking-wider">MỤC LỤC</p>
+                            <p class="flex justify-between font-medium"><span>LỜI MỞ ĐẦU</span><span>5</span></p>
+                            <p class="flex justify-between font-medium"><span>CHƯƠNG 1: GIỚI THIỆU ỨNG DỤNG</span><span>10</span></p>
+                            <p class="flex justify-between font-medium"><span>CHƯƠNG 2: QUẢN LÝ DỰ ÁN</span><span>15</span></p>
+                          </div>
+                          <div v-else class="space-y-1">
+                            <p class="font-bold text-[9px] uppercase text-black border-b border-black/20 pb-0.5">{{ decodeURIComponent(f.name) }}</p>
+                            <p class="text-gray-800 text-[8px] leading-relaxed line-clamp-5">{{ f.snippet || 'Tài liệu Microsoft Word văn bản chính thức...' }}</p>
+                          </div>
+                          <div class="flex items-center justify-between text-[7px] text-gray-400 font-sans border-t border-gray-200 pt-0.5">
+                            <span>Microsoft Word Document</span>
+                            <span>Trang 1 / 1</span>
+                          </div>
+                        </div>
+
+                        <!-- PDF Page Preview -->
+                        <div 
+                          v-else-if="isPdfFile(f.name)" 
+                          class="w-full h-full bg-[#1e1515] border border-[#ff453a]/20 text-white p-3 rounded-xl flex flex-col justify-between text-left">
+                          <div class="flex items-center justify-between">
+                            <i class="fa-regular fa-file-pdf text-[#ff453a] text-lg"></i>
+                            <span class="text-[8.5px] font-mono text-[#ff453a] uppercase font-bold">PDF</span>
+                          </div>
+                          <p class="text-[8.5px] text-gray-300 font-mono line-clamp-3 leading-relaxed">{{ f.snippet || decodeURIComponent(f.name) }}</p>
+                          <div class="w-full h-1 bg-[#ff453a]/30 rounded-full"></div>
+                        </div>
+
+                        <!-- Markdown Preview -->
+                        <div 
+                          v-else-if="isMarkdownFile(f.name)" 
+                          class="w-full h-full bg-[#16181d] border border-white/10 text-white p-3 rounded-xl flex flex-col justify-between text-left">
+                          <div class="flex items-center justify-between">
+                            <i class="fa-brands fa-markdown text-[#72b6fc] text-base"></i>
+                            <span class="text-[8.5px] font-mono text-[#72b6fc]">MARKDOWN</span>
+                          </div>
+                          <p class="text-[8.5px] font-mono text-gray-300 line-clamp-3 leading-relaxed whitespace-pre-wrap">{{ f.snippet || '# Markdown Document' }}</p>
+                          <div class="text-[8px] text-[#8e8e93] font-mono">Rendered Preview</div>
+                        </div>
+
+                        <!-- Plaintext / Code Preview -->
+                        <div 
+                          v-else-if="isTextFile(f.name)" 
+                          class="w-full h-full bg-[#16181d] border border-white/10 text-[#f5f5f7] p-3 rounded-xl flex flex-col justify-between text-left font-mono">
+                          <div class="flex items-center justify-between">
+                            <i class="fa-regular fa-file-code text-[#30d158] text-base"></i>
+                            <span class="text-[8.5px] text-[#30d158]">CODE / TEXT</span>
+                          </div>
+                          <p class="text-[8.5px] text-gray-300 line-clamp-3 leading-relaxed whitespace-pre-wrap">{{ f.snippet || 'Plaintext content...' }}</p>
+                          <div class="text-[8px] text-[#8e8e93]">UTF-8 Source</div>
+                        </div>
+
+                        <!-- Archive Preview -->
+                        <div 
+                          v-else-if="isArchiveFile(f.name)" 
+                          class="w-full h-full bg-[#201828] border border-[#bf5af2]/30 text-white p-3 rounded-xl flex flex-col justify-between text-left">
+                          <div class="flex items-center justify-between">
+                            <i class="fa-regular fa-file-zipper text-[#bf5af2] text-lg"></i>
+                            <span class="text-[8.5px] font-mono text-[#bf5af2]">ARCHIVE</span>
+                          </div>
+                          <p class="text-[8.5px] text-gray-300 line-clamp-2 leading-relaxed">Compressed package: RAR / ZIP / 7Z</p>
+                          <div class="text-[8px] text-[#bf5af2] font-mono">7-Zip Inspector Ready</div>
+                        </div>
+
+                        <!-- Media / Generic Preview -->
+                        <div v-else class="w-full h-full bg-[#181d26] border border-white/10 text-white p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                          <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#72b6fc] text-base mb-1.5">
+                            <i class="fa-solid fa-play ml-0.5"></i>
+                          </div>
+                          <span class="text-[9px] font-mono text-[#8e8e93]">Media Stream</span>
+                        </div>
+
+                      </div>
+
+                      <!-- Card Footer: Size & ModTime -->
+                      <div class="flex items-center justify-between text-[11px] font-mono text-[#8e8e93] pt-1.5 border-t border-white/[0.04]">
+                        <span>{{ formatBytes(f.size) }}</span>
+                        <span>{{ formatDate(f.modTime) }}</span>
+                      </div>
+
                     </div>
                   </div>
 
@@ -2847,14 +2990,64 @@
           failedChunks: []
         });
 
-        // Cloudreve Sidebar Categories & Explorer Controls
+        // Cloudreve / Proton Drive Explorer Controls & Selection State
         const selectedStorageCategory = ref('all');
         const storageSearchQuery = ref('');
-        const storageViewMode = ref('list'); // 'list' | 'grid'
+        const storageViewMode = ref('grid'); // Default to grid view
         const remoteDownloadUrl = ref('');
         const isRemoteDownloading = ref(false);
         const remoteDownloadMsg = ref('');
         const remoteDownloadSuccess = ref(false);
+
+        // Multi-selection state
+        const selectedFileNames = ref(new Set());
+        const selectedFiles = computed(() => {
+          const list = files.value || [];
+          return list.filter(f => selectedFileNames.value.has(f.name));
+        });
+
+        function isSelected(f) {
+          return f && f.name && selectedFileNames.value.has(f.name);
+        }
+
+        function toggleSelectFile(f) {
+          if (!f || !f.name) return;
+          if (selectedFileNames.value.has(f.name)) {
+            selectedFileNames.value.delete(f.name);
+          } else {
+            selectedFileNames.value.add(f.name);
+          }
+          selectedFileNames.value = new Set(selectedFileNames.value);
+        }
+
+        function clearSelection() {
+          selectedFileNames.value.clear();
+          selectedFileNames.value = new Set();
+        }
+
+        function downloadSelectedFiles() {
+          for (const f of selectedFiles.value) {
+            const a = document.createElement('a');
+            a.href = getDownloadUrl(f.name);
+            a.download = decodeURIComponent(f.name);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+        }
+
+        async function deleteSelectedFiles() {
+          const count = selectedFiles.value.length;
+          if (count === 0) return;
+          if (!confirm(`Are you sure you want to delete ${count} file(s) permanently?`)) return;
+          for (const f of selectedFiles.value) {
+            files.value = files.value.filter(item => item.name !== f.name);
+            try {
+              await fetch(`/api/files/delete?vps_id=vps2&name=${encodeURIComponent(f.name)}`, { method: 'DELETE' });
+            } catch (e) {}
+          }
+          clearSelection();
+        }
 
         const currentCategoryTitle = computed(() => {
           const map = {
@@ -3646,6 +3839,13 @@
           categoryCounts,
           filteredFiles,
           triggerRemoteDownload,
+          selectedFileNames,
+          selectedFiles,
+          isSelected,
+          toggleSelectFile,
+          clearSelection,
+          downloadSelectedFiles,
+          deleteSelectedFiles,
           uploadStatus,
           loadFilesForSelectedServer,
           handleFileSelected,
