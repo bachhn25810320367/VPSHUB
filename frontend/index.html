@@ -105,6 +105,9 @@
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+  <!-- Archive Inspector (JSZip - must be before docx-preview) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+
   <!-- Word Docx Previewer (Client-side) -->
   <script src="https://unpkg.com/docx-preview@0.4.0/dist/docx-preview.min.js"></script>
 
@@ -113,9 +116,6 @@
 
   <!-- Excel Spreadsheet Viewer (SheetJS) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-  <!-- Archive Inspector (JSZip) -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
 
   <style>
     /* Apple HIG Display & Text Rendering Rules */
@@ -2733,7 +2733,8 @@
 
         function isArchiveFile(name) {
           if (!name) return false;
-          return ['zip'].includes(name.split('.').pop().toLowerCase());
+          const ext = name.split('.').pop().toLowerCase();
+          return ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(ext);
         }
 
         function isFontFile(name) {
@@ -2891,24 +2892,38 @@
             previewZipEntries.value = [];
             showPreviewModal.value = true;
             try {
-              const res = await fetch(previewUrl.value);
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              const buf = await res.arrayBuffer();
-              if (window.JSZip) {
+              // 1. Try server-side 7z inspection (supports RAR, ZIP, 7Z, TAR, GZ)
+              const res = await fetch(`/api/files/archive-inspect?vps_id=vps2&name=${encodeURIComponent(f.name)}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data.entries && data.entries.length > 0) {
+                  previewZipEntries.value = data.entries.map(e => ({
+                    name: e.name,
+                    size: e.size,
+                    isDir: e.is_dir || e.isDir || false
+                  }));
+                  return;
+                }
+              }
+              // 2. Client-side JSZip fallback for ZIP files
+              if (cleanName.endsWith('.zip') && window.JSZip) {
+                const dlRes = await fetch(previewUrl.value);
+                const buf = await dlRes.arrayBuffer();
                 const zip = await window.JSZip.loadAsync(buf);
                 const entries = [];
                 zip.forEach((relPath, zipEntry) => {
                   entries.push({
                     name: relPath,
                     isDir: zipEntry.dir,
-                    size: zipEntry._data ? (zipEntry._data.uncompressedSize || 0) : 0,
-                    date: zipEntry.date
+                    size: zipEntry._data ? (zipEntry._data.uncompressedSize || 0) : 0
                   });
                 });
                 previewZipEntries.value = entries;
+                return;
               }
+              throw new Error('Archive inspect returned empty or unsupported format');
             } catch (err) {
-              previewZipEntries.value = [{ name: 'Failed to inspect zip: ' + err.message, isDir: false, size: 0 }];
+              previewZipEntries.value = [{ name: 'Failed to inspect archive: ' + err.message, isDir: false, size: 0 }];
             }
             return;
           } else if (isFontFile(cleanName)) {

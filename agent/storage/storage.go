@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -49,7 +51,10 @@ func (sm *StorageManager) HandleUploadChunk(w http.ResponseWriter, r *http.Reque
 	uploadID := r.Header.Get("Upload-Id")
 	chunkIndexStr := r.Header.Get("Chunk-Index")
 	totalChunksStr := r.Header.Get("Total-Chunks")
-	fileName := r.Header.Get("File-Name")
+	fileName := r.URL.Query().Get("file_name")
+	if fileName == "" {
+		fileName = r.Header.Get("File-Name")
+	}
 
 	if uploadID == "" || chunkIndexStr == "" || totalChunksStr == "" || fileName == "" {
 		http.Error(w, `{"error":"Missing required upload headers"}`, http.StatusBadRequest)
@@ -247,5 +252,92 @@ func (sm *StorageManager) HandleDeleteFile(w http.ResponseWriter, r *http.Reques
 		"status":  "deleted",
 		"file":    fileName,
 		"success": true,
+	})
+}
+
+// ArchiveEntry represents a file or directory inside an archive
+type ArchiveEntry struct {
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Packed   int64  `json:"packed"`
+	Modified string `json:"modified"`
+	IsDir    bool   `json:"is_dir"`
+}
+
+// HandleInspectArchive runs 7z to inspect archive contents (rar, zip, 7z, tar, gz)
+func (sm *StorageManager) HandleInspectArchive(w http.ResponseWriter, r *http.Request) {
+	fileName := r.URL.Query().Get("name")
+	if fileName == "" {
+		http.Error(w, `{"error":"Missing file name"}`, http.StatusBadRequest)
+		return
+	}
+	fileName = filepath.Base(fileName)
+	targetPath := filepath.Join(sm.uploadDir, fileName)
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		escaped := filepath.Join(sm.uploadDir, url.QueryEscape(fileName))
+		if _, err2 := os.Stat(escaped); err2 == nil {
+			targetPath = escaped
+		} else {
+			http.Error(w, `{"error":"Archive file not found"}`, http.StatusNotFound)
+			return
+		}
+	}
+
+	cmd := exec.Command("7z", "l", "-slt", targetPath)
+	out, err := cmd.Output()
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Failed to inspect archive: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+
+	lines := strings.Split(string(out), "\n")
+	var entries []ArchiveEntry
+	var cur ArchiveEntry
+	inListing := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "----------") {
+			inListing = true
+			continue
+		}
+		if !inListing {
+			continue
+		}
+
+		if line == "" {
+			if cur.Name != "" && cur.Name != targetPath {
+				entries = append(entries, cur)
+			}
+			cur = ArchiveEntry{}
+			continue
+		}
+
+		parts := strings.SplitN(line, " = ", 2)
+		if len(parts) == 2 {
+			k, v := parts[0], parts[1]
+			switch k {
+			case "Path":
+				cur.Name = v
+			case "Size":
+				cur.Size, _ = strconv.ParseInt(v, 10, 64)
+			case "Packed Size":
+				cur.Packed, _ = strconv.ParseInt(v, 10, 64)
+			case "Modified":
+				cur.Modified = v
+			case "Folder":
+				cur.IsDir = (v == "+")
+			}
+		}
+	}
+	if cur.Name != "" && cur.Name != targetPath {
+		entries = append(entries, cur)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"archive": fileName,
+		"entries": entries,
+		"total":   len(entries),
 	})
 }

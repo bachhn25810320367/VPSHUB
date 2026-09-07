@@ -734,7 +734,8 @@ export async function onRequest(context) {
     }
     fwd.set("X-Agent-Secret", secret);
     try {
-      const r = await fetch(`${srv.tunnelUrl}/api/files/upload-chunk`, { method: "POST", headers: fwd, body: request.body });
+      const agentUrl = `${srv.tunnelUrl}/api/files/upload-chunk?file_name=${encodeURIComponent(decodedName || rawFileName)}`;
+      const r = await fetch(agentUrl, { method: "POST", headers: fwd, body: request.body });
       if (!r.ok) {
         return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
       }
@@ -754,6 +755,24 @@ export async function onRequest(context) {
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      if (!r.ok) {
+        return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
+      }
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
+  }
+
+  // 6f. GET /api/files/archive-inspect (Inspect rar, zip, 7z, tar, gz)
+  if (path === "/api/files/archive-inspect" && method === "GET") {
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const fileName = url.searchParams.get("name") || "";
+    if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/archive-inspect?name=${encodeURIComponent(fileName)}`, {
+        headers: { "X-Agent-Secret": secret }
+      });
       if (!r.ok) {
         return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
       }

@@ -80,6 +80,7 @@ func main() {
 	mux.HandleFunc("/api/files/list", storageMgr.HandleListFiles)
 	mux.HandleFunc("/api/files/download", storageMgr.HandleDownloadFile)
 	mux.HandleFunc("/api/files/delete", storageMgr.HandleDeleteFile)
+	mux.HandleFunc("/api/files/archive-inspect", storageMgr.HandleInspectArchive)
 
 	// Combine CORS and Authentication middlewares
 	handler := corsMiddleware(authMiddleware(*secret, mux))
