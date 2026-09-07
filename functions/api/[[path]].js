@@ -721,16 +721,12 @@ export async function onRequest(context) {
       const v = request.headers.get(k) || request.headers.get(k.toLowerCase());
       if (v) fwd.set(k, v);
     }
+    let decodedName = "";
     const rawFileName = request.headers.get("File-Name") || request.headers.get("file-name") || "";
     if (rawFileName) {
-      let decodedName = rawFileName;
+      decodedName = rawFileName;
       try { decodedName = decodeURIComponent(rawFileName); } catch (e) {}
-      const utf8Bytes = new TextEncoder().encode(decodedName);
-      let byteStr = "";
-      for (let j = 0; j < utf8Bytes.length; j++) {
-        byteStr += String.fromCharCode(utf8Bytes[j]);
-      }
-      fwd.set("File-Name", byteStr);
+      fwd.set("File-Name", encodeURIComponent(decodedName));
     }
     fwd.set("X-Agent-Secret", secret);
     try {
