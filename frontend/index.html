@@ -857,20 +857,89 @@
           <!-- ================= RIGHT MAIN FILES EXPLORER ================= -->
           <div class="lg:col-span-9 xl:col-span-9 apple-glass-card p-6 flex flex-col justify-between min-h-[550px]">
             <div>
-              <!-- Explorer Top Action Bar (Proton Drive Style) -->
+              <!-- Explorer Top Action Bar (Proton Drive / Expanded New Menu Style) -->
               <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
                 
-                <!-- Left: + New Pill Button -->
-                <div class="flex items-center gap-2.5">
-                  <label class="px-4 py-2 rounded-full bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold shadow-md cursor-pointer transition-all flex items-center gap-2 select-none active:scale-95">
-                    <i class="fa-solid fa-plus text-xs"></i>
-                    <span>New</span>
-                    <input type="file" class="hidden" @change="handleFileSelected">
-                  </label>
+                <!-- Left: + New Pill Button with Dropdown & Search Bar right next to it -->
+                <div class="flex items-center gap-3">
+                  <div class="relative" id="newDropdownContainer">
+                    <button 
+                      @click.stop="showNewMenu = !showNewMenu"
+                      class="px-4 py-2 rounded-full bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold shadow-md transition-all flex items-center gap-2 select-none active:scale-95">
+                      <i class="fa-solid fa-plus text-xs"></i>
+                      <span>New</span>
+                    </button>
+
+                    <!-- Expanded Dropdown Menu (Matches Screenshot Exactly!) -->
+                    <div 
+                      v-if="showNewMenu" 
+                      class="absolute left-0 top-full mt-2 w-60 rounded-2xl bg-[#1e1f23] border border-white/10 shadow-2xl py-2 z-50 text-xs text-[#e4e4e7] backdrop-blur-md">
+                      
+                      <!-- Upload files -->
+                      <label class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 cursor-pointer transition-colors">
+                        <i class="fa-solid fa-file-arrow-up text-[#72b6fc] w-4 text-center"></i>
+                        <span>Upload files</span>
+                        <input type="file" multiple class="hidden" @change="onFilesChosen">
+                      </label>
+
+                      <!-- Upload folder -->
+                      <label class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 cursor-pointer transition-colors">
+                        <i class="fa-solid fa-folder-arrow-up text-[#ff9f0a] w-4 text-center"></i>
+                        <span>Upload folder</span>
+                        <input type="file" webkitdirectory directory class="hidden" @change="onFolderChosen">
+                      </label>
+
+                      <!-- Upload from clipboard -->
+                      <button 
+                        @click="uploadFromClipboard" 
+                        class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 text-left transition-colors">
+                        <i class="fa-regular fa-clipboard text-[#30d158] w-4 text-center"></i>
+                        <span>Upload from clipboard</span>
+                      </button>
+
+                      <!-- New remote download -->
+                      <button 
+                        @click="openRemoteDownloadDialog" 
+                        class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 text-left transition-colors">
+                        <i class="fa-solid fa-cloud-arrow-down text-[#bf5af2] w-4 text-center"></i>
+                        <span>New remote download</span>
+                      </button>
+
+                      <!-- Divider -->
+                      <div class="my-1.5 border-t border-white/[0.08]"></div>
+
+                      <!-- New folder -->
+                      <button 
+                        @click="createNewFolder" 
+                        class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 text-left transition-colors">
+                        <i class="fa-solid fa-folder-plus text-[#8e8e93] w-4 text-center"></i>
+                        <span>New folder</span>
+                      </button>
+
+                      <!-- New file -->
+                      <button 
+                        @click="createNewFile" 
+                        class="w-full px-3.5 py-2 hover:bg-white/[0.08] hover:text-white flex items-center gap-3 text-left transition-colors">
+                        <i class="fa-solid fa-file-circle-plus text-[#8e8e93] w-4 text-center"></i>
+                        <span>New file</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Search Input right next to New button (Placeholder: Type / to search...) -->
+                  <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] text-[#8e8e93]"></i>
+                    <input 
+                      id="storageSearchInput"
+                      type="text" 
+                      v-model="storageSearchQuery" 
+                      placeholder="Type / to search..."
+                      class="pl-9 pr-3.5 py-2 rounded-full bg-[#202124] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc] w-40 sm:w-56 transition-all">
+                  </div>
                 </div>
 
-                <!-- Center: Location Breadcrumb OR Floating Selection Bar -->
-                <div class="flex-1 flex justify-center">
+                <!-- Center / Right: Selection Bar OR Controls (View toggle, Sort, Refresh) -->
+                <div class="flex items-center gap-3">
                   <!-- Floating Selection Bar (when items are selected) -->
                   <div v-if="selectedFileNames.size > 0" class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#202124] border border-white/10 shadow-2xl text-xs text-white">
                     <button @click="clearSelection" class="text-[#8e8e93] hover:text-white transition-colors" title="Clear Selection">
@@ -896,50 +965,65 @@
                     </button>
                   </div>
 
-                  <!-- Location Badge (when no selection) -->
-                  <div v-else class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white font-medium">
-                    <i class="fa-solid fa-house text-xs text-[#72b6fc]"></i>
-                    <span>{{ currentCategoryTitle }}</span>
-                    <span class="text-[11px] text-[#8e8e93] font-mono">({{ filteredFiles.length }})</span>
-                  </div>
-                </div>
+                  <!-- Standard Controls when no selection -->
+                  <template v-else>
+                    <!-- Location Badge -->
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white font-medium">
+                      <i class="fa-solid fa-house text-xs text-[#72b6fc]"></i>
+                      <span>{{ currentCategoryTitle }}</span>
+                      <span class="text-[11px] text-[#8e8e93] font-mono">({{ filteredFiles.length }})</span>
+                    </div>
 
-                <!-- Right: Search, View Mode Toggle, Refresh -->
-                <div class="flex items-center gap-2">
-                  <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[#8e8e93]"></i>
-                    <input 
-                      type="text" 
-                      v-model="storageSearchQuery" 
-                      placeholder="Search..."
-                      class="pl-8 pr-3 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc] w-32 sm:w-44 transition-all">
-                  </div>
+                    <!-- Sort Dropdown -->
+                    <div class="relative" id="sortDropdownContainer">
+                      <button 
+                        @click.stop="showSortMenu = !showSortMenu" 
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-[#e4e4e7] hover:text-white transition-all">
+                        <i class="fa-solid fa-arrow-down-short-wide text-[10px] text-[#72b6fc]"></i>
+                        <span>Sort</span>
+                      </button>
+                      <div v-if="showSortMenu" class="absolute right-0 mt-1 w-32 rounded-xl bg-[#202124] border border-white/10 shadow-2xl py-1 z-30 text-xs text-[#e4e4e7]">
+                        <button @click="setSort('date')" class="w-full px-3 py-1.5 text-left hover:bg-white/10 flex justify-between items-center">
+                          <span>Date</span>
+                          <i v-if="sortBy === 'date'" class="fa-solid fa-check text-[10px] text-[#72b6fc]"></i>
+                        </button>
+                        <button @click="setSort('name')" class="w-full px-3 py-1.5 text-left hover:bg-white/10 flex justify-between items-center">
+                          <span>Name</span>
+                          <i v-if="sortBy === 'name'" class="fa-solid fa-check text-[10px] text-[#72b6fc]"></i>
+                        </button>
+                        <button @click="setSort('size')" class="w-full px-3 py-1.5 text-left hover:bg-white/10 flex justify-between items-center">
+                          <span>Size</span>
+                          <i v-if="sortBy === 'size'" class="fa-solid fa-check text-[10px] text-[#72b6fc]"></i>
+                        </button>
+                      </div>
+                    </div>
 
-                  <!-- Mode Toggle (List / Grid) -->
-                  <div class="flex items-center bg-[#202124] p-0.5 rounded-full border border-white/10 text-xs">
+                    <!-- View Toggle (Grid / List) -->
+                    <div class="flex items-center bg-[#202124] p-0.5 rounded-full border border-white/10 text-xs">
+                      <button 
+                        @click="storageViewMode = 'grid'" 
+                        :class="storageViewMode === 'grid' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
+                        class="p-1.5 px-2.5 rounded-full transition-all" 
+                        title="Grid View">
+                        <i class="fa-solid fa-grip text-[11px]"></i>
+                      </button>
+                      <button 
+                        @click="storageViewMode = 'list'" 
+                        :class="storageViewMode === 'list' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
+                        class="p-1.5 px-2.5 rounded-full transition-all" 
+                        title="List View">
+                        <i class="fa-solid fa-list text-[11px]"></i>
+                      </button>
+                    </div>
+
+                    <!-- Refresh Button -->
                     <button 
-                      @click="storageViewMode = 'grid'" 
-                      :class="storageViewMode === 'grid' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
-                      class="p-1.5 px-2.5 rounded-full transition-all" 
-                      title="Grid View">
-                      <i class="fa-solid fa-grip text-[11px]"></i>
+                      @click="loadFilesForSelectedServer" 
+                      class="p-2 rounded-full bg-[#202124] hover:bg-white/10 text-[#8e8e93] hover:text-white text-xs transition-all" 
+                      title="Reload files">
+                      <i class="fa-solid fa-rotate-right text-[11px]"></i>
                     </button>
-                    <button 
-                      @click="storageViewMode = 'list'" 
-                      :class="storageViewMode === 'list' ? 'bg-[#72b6fc] text-[#121316] font-semibold' : 'text-[#8e8e93] hover:text-white'" 
-                      class="p-1.5 px-2.5 rounded-full transition-all" 
-                      title="List View">
-                      <i class="fa-solid fa-list text-[11px]"></i>
-                    </button>
-                  </div>
-
-                  <!-- Refresh -->
-                  <button 
-                    @click="loadFilesForSelectedServer" 
-                    class="p-2 rounded-full bg-[#202124] hover:bg-white/10 text-[#8e8e93] hover:text-white text-xs transition-all" 
-                    title="Reload files">
-                    <i class="fa-solid fa-rotate-right text-[11px]"></i>
-                  </button>
+                  </template>
                 </div>
               </div>
 
@@ -1620,6 +1704,49 @@
 
     <!-- ================================================================= -->
     
+    <!-- ================================================================= -->
+    <!-- MODAL: NEW REMOTE DOWNLOAD (PROMPT MODAL)                         -->
+    <!-- ================================================================= -->
+    <div v-if="showRemoteDlModal" class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div class="apple-glass-card max-w-md w-full p-6 border border-white/15 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <div class="flex items-center gap-2.5 text-white font-semibold text-sm">
+            <div class="w-8 h-8 rounded-xl bg-[#bf5af2]/15 text-[#bf5af2] flex items-center justify-center">
+              <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+            </div>
+            <span>New remote download</span>
+          </div>
+          <button @click="showRemoteDlModal = false" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-[#8e8e93] hover:text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs text-[#8e8e93] block">Direct File URL (cURL / Wget straight to NVMe):</label>
+          <input 
+            type="url" 
+            v-model="remoteDownloadUrl" 
+            @keydown.enter="triggerRemoteDownload"
+            placeholder="https://example.com/dataset.zip" 
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.05] border border-white/15 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#72b6fc] font-mono">
+        </div>
+
+        <div v-if="remoteDownloadMsg" class="p-2.5 rounded-xl text-xs font-mono" :class="remoteDownloadSuccess ? 'bg-[#30d158]/10 text-[#30d158] border border-[#30d158]/25' : 'bg-[#ff453a]/10 text-[#ff453a] border border-[#ff453a]/25'">
+          {{ remoteDownloadMsg }}
+        </div>
+
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button @click="showRemoteDlModal = false" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-colors">
+            Cancel
+          </button>
+          <button @click="triggerRemoteDownload" :disabled="!remoteDownloadUrl || isRemoteDownloading" class="px-5 py-2 rounded-xl bg-[#72b6fc] hover:bg-[#8ec7fd] text-[#121316] text-xs font-semibold shadow-md transition-all disabled:opacity-50 flex items-center gap-2">
+            <i v-if="isRemoteDownloading" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+            <span>{{ isRemoteDownloading ? 'Downloading...' : 'Fetch to VPS' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- MODAL: FILE PREVIEW (IMAGE, VIDEO, AUDIO, PDF, CODE)              -->
     <!-- ================================================================= -->
@@ -2869,6 +2996,8 @@
         const selectedStorageCategory = ref('all');
         const storageSearchQuery = ref('');
         const storageViewMode = ref('grid'); // Default to grid view
+        const showNewMenu = ref(false);
+        const showRemoteDlModal = ref(false);
         const remoteDownloadUrl = ref('');
         const isRemoteDownloading = ref(false);
         const remoteDownloadMsg = ref('');
@@ -3016,12 +3145,11 @@
           }
         }
 
-        async function handleFileSelected(e) {
-          const file = e.target.files[0];
+        async function uploadSingleFile(file) {
           if (!file) return;
 
           const CHUNK_SIZE = 20 * 1024 * 1024;
-          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE) || 1;
           const uploadId = 'up_' + Date.now();
           const srv = currentStorageServer.value;
 
@@ -3032,10 +3160,10 @@
             currentChunk: 0,
             totalChunks: totalChunks,
             failedChunks: [],
-            message: 'Dividing into 20MB stream chunks...'
+            message: totalChunks > 1 ? 'Dividing into 20MB stream chunks...' : 'Uploading...'
           };
 
-          const upVid = (currentStorageServer.value && (currentStorageServer.value.id || currentStorageServer.value.vps_id)) || '';
+          const upVid = (currentStorageServer.value && (currentStorageServer.value.id || currentStorageServer.value.vps_id)) || 'vps2';
           for (let i = 0; i < totalChunks; i++) {
             const start = i * CHUNK_SIZE;
             const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -3059,21 +3187,104 @@
               uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
             } catch (err) {
               uploadStatus.value.failedChunks.push(i + 1);
-              uploadStatus.value.message = `Chunk ${i + 1}/${totalChunks} failed (${err.message}). Continuing...`;
-              uploadStatus.value.progress = Math.round(((i + 1) / totalChunks) * 100);
+              uploadStatus.value.message = `Chunk ${i + 1}/${totalChunks} failed (${err.message}).`;
             }
           }
 
           if (uploadStatus.value.failedChunks.length > 0) {
-            uploadStatus.value.message = `Upload incomplete: chunks ${uploadStatus.value.failedChunks.join(', ')} failed. Retry upload.`;
+            uploadStatus.value.message = `Upload incomplete: chunks ${uploadStatus.value.failedChunks.join(', ')} failed.`;
           } else {
             uploadStatus.value.message = 'Upload finalized!';
           }
+
           setTimeout(async () => {
             uploadStatus.value.isUploading = false;
-            try { e.target.value = ''; } catch(err) {}
             await loadFilesForSelectedServer();
           }, 800);
+        }
+
+        async function handleFileSelected(e) {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          await uploadSingleFile(file);
+          try { e.target.value = ''; } catch(err) {}
+        }
+
+        async function onFilesChosen(e) {
+          showNewMenu.value = false;
+          const chosen = e.target.files;
+          if (!chosen || chosen.length === 0) return;
+          for (let i = 0; i < chosen.length; i++) {
+            await uploadSingleFile(chosen[i]);
+          }
+          try { e.target.value = ''; } catch(err) {}
+        }
+
+        async function onFolderChosen(e) {
+          showNewMenu.value = false;
+          const chosen = e.target.files;
+          if (!chosen || chosen.length === 0) return;
+          for (let i = 0; i < chosen.length; i++) {
+            await uploadSingleFile(chosen[i]);
+          }
+          try { e.target.value = ''; } catch(err) {}
+        }
+
+        async function uploadFromClipboard() {
+          showNewMenu.value = false;
+          try {
+            if (navigator.clipboard && navigator.clipboard.read) {
+              const items = await navigator.clipboard.read();
+              for (const item of items) {
+                for (const type of item.types) {
+                  if (type.startsWith('image/')) {
+                    const blob = await item.getType(type);
+                    const ext = type.split('/')[1] || 'png';
+                    const file = new File([blob], `clipboard_${Date.now()}.${ext}`, { type });
+                    await uploadSingleFile(file);
+                    return;
+                  }
+                }
+              }
+            }
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              const text = await navigator.clipboard.readText();
+              if (text && text.trim()) {
+                const file = new File([text], `clipboard_${Date.now()}.txt`, { type: 'text/plain' });
+                await uploadSingleFile(file);
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn('Clipboard read notice:', e);
+          }
+          const manualText = prompt('Paste text or code snippet here:');
+          if (manualText && manualText.trim()) {
+            const file = new File([manualText], `snippet_${Date.now()}.txt`, { type: 'text/plain' });
+            await uploadSingleFile(file);
+          }
+        }
+
+        function openRemoteDownloadDialog() {
+          showNewMenu.value = false;
+          showRemoteDlModal.value = true;
+          remoteDownloadMsg.value = '';
+        }
+
+        async function createNewFile() {
+          showNewMenu.value = false;
+          const name = prompt('Enter new file name (e.g. notes.md, test.py):');
+          if (!name || !name.trim()) return;
+          const file = new File([''], name.trim(), { type: 'text/plain' });
+          await uploadSingleFile(file);
+        }
+
+        async function createNewFolder() {
+          showNewMenu.value = false;
+          const name = prompt('Enter new folder name:');
+          if (!name || !name.trim()) return;
+          const file = new File([''], `${name.trim()}/.keep`, { type: 'text/plain' });
+          await uploadSingleFile(file);
         }
 
         // Private download always goes through same-origin Cloudflare proxy
@@ -3662,6 +3873,25 @@
             if (e.key === 'Escape') {
               activeServerModal.value = null;
               showAddExpenseModal.value = false;
+              showNewMenu.value = false;
+              showRemoteDlModal.value = false;
+            }
+            if (e.key === '/' && activeTab.value === 'storage') {
+              const activeTag = document.activeElement ? document.activeElement.tagName : '';
+              if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                e.preventDefault();
+                const sInput = document.getElementById('storageSearchInput');
+                if (sInput) sInput.focus();
+              }
+            }
+          });
+
+          window.addEventListener('click', (e) => {
+            if (!e.target.closest('#newDropdownContainer')) {
+              showNewMenu.value = false;
+            }
+            if (showSortMenu.value && !e.target.closest('#sortDropdownContainer')) {
+              showSortMenu.value = false;
             }
           });
         });
@@ -3701,6 +3931,14 @@
           selectedStorageCategory,
           storageSearchQuery,
           storageViewMode,
+          showNewMenu,
+          showRemoteDlModal,
+          onFilesChosen,
+          onFolderChosen,
+          uploadFromClipboard,
+          openRemoteDownloadDialog,
+          createNewFolder,
+          createNewFile,
           remoteDownloadUrl,
           isRemoteDownloading,
           remoteDownloadMsg,
