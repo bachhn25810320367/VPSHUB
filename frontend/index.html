@@ -108,6 +108,15 @@
   <!-- Word Docx Previewer (Client-side) -->
   <script src="https://unpkg.com/docx-preview@0.4.0/dist/docx-preview.min.js"></script>
 
+  <!-- Markdown Renderer (marked.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Excel Spreadsheet Viewer (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <!-- Archive Inspector (JSZip) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+
   <style>
     /* Apple HIG Display & Text Rendering Rules */
     html, body {
@@ -156,6 +165,37 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+    /* Apple Dark Markdown Renderer Styles */
+    .markdown-body {
+      color: #f5f5f7;
+      font-size: 14px;
+      line-height: 1.68;
+    }
+    .markdown-body h1 { font-size: 1.75em; font-weight: 700; margin: 1em 0 0.5em; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 0.3em; color: #ffffff; }
+    .markdown-body h2 { font-size: 1.35em; font-weight: 600; margin: 0.9em 0 0.4em; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.25em; color: #ffffff; }
+    .markdown-body h3 { font-size: 1.15em; font-weight: 600; margin: 0.8em 0 0.3em; color: #ffffff; }
+    .markdown-body p, .markdown-body ul, .markdown-body ol { margin-bottom: 0.9em; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5em; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.5em; }
+    .markdown-body li { margin: 0.25em 0; }
+    .markdown-body a { color: #0a84ff; text-decoration: underline; text-underline-offset: 3px; }
+    .markdown-body code { font-family: "SF Mono", monospace; background: rgba(255,255,255,0.08); padding: 0.2em 0.4em; border-radius: 6px; font-size: 0.88em; color: #ff9f0a; }
+    .markdown-body pre { background: #141416; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1em; overflow-x: auto; margin: 1em 0; }
+    .markdown-body pre code { background: transparent; padding: 0; color: #f5f5f7; font-size: 0.9em; }
+    .markdown-body blockquote { border-left: 3px solid #0a84ff; padding-left: 1em; color: #8e8e93; font-style: italic; margin: 1em 0; }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 13px; }
+    .markdown-body th { background: rgba(255,255,255,0.06); color: #ffffff; font-weight: 600; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); text-align: left; }
+    .markdown-body td { padding: 8px 12px; border: 1px solid rgba(255,255,255,0.07); }
+    .markdown-body tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    .markdown-body hr { border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5em 0; }
+    .markdown-body img { max-width: 100%; border-radius: 10px; margin: 1em 0; }
+
+    /* Excel SheetJS Styles */
+    .sheetjs-table-container table { width: 100%; border-collapse: collapse; font-family: "SF Mono", monospace; font-size: 12px; }
+    .sheetjs-table-container th, .sheetjs-table-container td { border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; text-align: left; white-space: nowrap; }
+    .sheetjs-table-container tr:first-child { background: rgba(255,255,255,0.08); font-weight: 600; color: #fff; }
+    .sheetjs-table-container tr:nth-child(even) { background: rgba(255,255,255,0.02); }
   </style>
 </head>
 <body class="relative min-h-screen selection:bg-[#0a84ff]/30 selection:text-[#0a84ff]">
@@ -1322,6 +1362,15 @@
               <i class="fa-solid fa-share-nodes text-[11px]"></i>
               <span class="hidden sm:inline">Share</span>
             </button>
+            <!-- Open in New Tab -->
+            <a 
+              :href="previewUrl" 
+              target="_blank"
+              class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all flex items-center gap-1.5"
+              title="Open File in New Tab">
+              <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+              <span class="hidden sm:inline">New Tab</span>
+            </a>
             <!-- Direct Download -->
             <a 
               :href="getDownloadUrl(previewFile ? previewFile.name : '')" 
@@ -1379,6 +1428,99 @@
           <div v-else-if="previewType === 'docx'" class="w-full max-h-[72vh] overflow-y-auto bg-white text-black p-6 rounded-xl shadow-inner font-sans">
             <div id="docx-container" class="min-h-[220px] flex items-center justify-center text-gray-500 text-sm">
               <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Rendering Word document...
+            </div>
+          </div>
+
+          <!-- Markdown (.md) Viewer -->
+          <div v-else-if="previewType === 'markdown'" class="w-full h-full flex flex-col text-left">
+            <div class="flex justify-between items-center pb-2 mb-3 border-b border-white/10 text-xs text-[#8e8e93]">
+              <div class="flex items-center gap-1 bg-[#1c1c1e] p-0.5 rounded-lg border border-white/10">
+                <button 
+                  @click="previewMarkdownMode = 'rendered'"
+                  :class="previewMarkdownMode === 'rendered' ? 'bg-[#0a84ff] text-white font-medium' : 'text-[#8e8e93] hover:text-white'"
+                  class="px-2.5 py-1 rounded-md text-[11px] transition-all flex items-center gap-1.5">
+                  <i class="fa-brands fa-markdown text-sm"></i> Rendered View
+                </button>
+                <button 
+                  @click="previewMarkdownMode = 'source'"
+                  :class="previewMarkdownMode === 'source' ? 'bg-[#0a84ff] text-white font-medium' : 'text-[#8e8e93] hover:text-white'"
+                  class="px-2.5 py-1 rounded-md text-[11px] transition-all flex items-center gap-1.5">
+                  <i class="fa-solid fa-code text-[11px]"></i> Markdown Source
+                </button>
+              </div>
+              <button @click="copyPreviewText" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-copy text-[10px]"></i>
+                <span>{{ textCopied ? 'Copied!' : 'Copy Markdown' }}</span>
+              </button>
+            </div>
+            <!-- Rendered Markdown View -->
+            <div v-if="previewMarkdownMode === 'rendered'" class="w-full p-6 rounded-xl bg-[#141416] border border-white/10 overflow-auto max-h-[68vh] markdown-body" v-html="previewMarkdownHtml"></div>
+            <!-- Raw Markdown Source -->
+            <pre v-else class="w-full p-4 rounded-xl bg-[#141416] border border-white/10 text-[#f5f5f7] font-mono text-xs overflow-auto max-h-[68vh] whitespace-pre-wrap"><code>{{ previewTextContent }}</code></pre>
+          </div>
+
+          <!-- Excel (.xlsx, .xls, .csv) Viewer -->
+          <div v-else-if="previewType === 'excel'" class="w-full h-full flex flex-col text-left">
+            <div v-if="previewExcelSheets.length > 0" class="flex items-center gap-1.5 pb-2 mb-3 border-b border-white/10 overflow-x-auto text-xs">
+              <span class="text-[#8e8e93] text-[11px] mr-1">Sheets:</span>
+              <button 
+                v-for="sh in previewExcelSheets" 
+                :key="sh"
+                @click="selectExcelSheet(sh)"
+                :class="previewExcelActiveSheet === sh ? 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/40 font-medium' : 'bg-white/5 text-[#8e8e93] border-white/10 hover:text-white'"
+                class="px-3 py-1 rounded-lg border text-xs font-mono whitespace-nowrap transition-all">
+                <i class="fa-regular fa-file-excel mr-1"></i> {{ sh }}
+              </button>
+            </div>
+            <div class="w-full overflow-auto max-h-[68vh] rounded-xl bg-[#141416] border border-white/10 p-3 sheetjs-table-container" v-html="previewExcelHtml"></div>
+          </div>
+
+          <!-- Archive (.zip) Inspector -->
+          <div v-else-if="previewType === 'archive'" class="w-full h-full flex flex-col text-left">
+            <div class="flex justify-between items-center pb-2 mb-2 border-b border-white/10 text-xs text-[#8e8e93]">
+              <span>Archive Contents ({{ previewZipEntries.length }} entries)</span>
+            </div>
+            <div class="w-full overflow-auto max-h-[68vh] rounded-xl bg-[#141416] border border-white/10">
+              <table class="w-full text-xs text-left">
+                <thead class="text-[#8e8e93] border-b border-white/10 bg-white/[0.02]">
+                  <tr>
+                    <th class="p-3">Item Path</th>
+                    <th class="p-3 text-right">Size</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/[0.04] font-mono">
+                  <tr v-for="e in previewZipEntries" :key="e.name" class="hover:bg-white/[0.03]">
+                    <td class="p-2.5 flex items-center gap-2">
+                      <i :class="e.isDir ? 'fa-solid fa-folder text-[#ff9f0a]' : 'fa-regular fa-file text-[#8e8e93]'"></i>
+                      <span class="text-white">{{ e.name }}</span>
+                    </td>
+                    <td class="p-2.5 text-right text-[#8e8e93] tabular-nums">
+                      {{ e.isDir ? '—' : formatBytes(e.size) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Font (.ttf, .otf, .woff, .woff2) Viewer -->
+          <div v-else-if="previewType === 'font'" class="w-full h-full flex flex-col text-left space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-white/10 text-xs text-[#8e8e93]">
+              <span>Typography Specimen</span>
+              <div class="flex items-center gap-2 font-mono">
+                <span>{{ previewFontSize }}px</span>
+                <input type="range" min="14" max="56" v-model="previewFontSize" class="cursor-pointer">
+              </div>
+            </div>
+            <div class="w-full p-6 rounded-xl bg-[#141416] border border-white/10 overflow-auto max-h-[65vh] space-y-4" :style="{ fontFamily: previewFontFamily }">
+              <h2 class="text-white font-normal border-b border-white/10 pb-3" :style="{ fontSize: previewFontSize + 'px' }">
+                The quick brown fox jumps over the lazy dog
+              </h2>
+              <div class="text-[#8e8e93] tracking-widest leading-relaxed" :style="{ fontSize: Math.max(12, previewFontSize - 8) + 'px' }">
+                <p>ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                <p>abcdefghijklmnopqrstuvwxyz</p>
+                <p>0123456789 !@#$%^&amp;*()-_=+[]{}|;:&apos;&quot;,&lt;.&gt;/?</p>
+              </div>
             </div>
           </div>
 
@@ -2553,19 +2695,19 @@
         function isImageFile(name) {
           if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
-          return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'].includes(ext);
+          return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp', 'tif', 'tiff'].includes(ext);
         }
 
         function isVideoFile(name) {
           if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
-          return ['mp4', 'webm', 'ogg', 'mov', 'm4v', 'mkv'].includes(ext);
+          return ['mp4', 'webm', 'ogg', 'mov', 'm4v', 'mkv', 'avi', 'wmv'].includes(ext);
         }
 
         function isAudioFile(name) {
           if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
-          return ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext);
+          return ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'].includes(ext);
         }
 
         function isPdfFile(name) {
@@ -2575,13 +2717,42 @@
 
         function isDocxFile(name) {
           if (!name) return false;
-          return name.split('.').pop().toLowerCase() === 'docx';
+          return ['doc', 'docx'].includes(name.split('.').pop().toLowerCase());
+        }
+
+        function isExcelFile(name) {
+          if (!name) return false;
+          return ['xlsx', 'xls', 'csv', 'numbers'].includes(name.split('.').pop().toLowerCase());
+        }
+
+        function isMarkdownFile(name) {
+          if (!name) return false;
+          const ext = name.split('.').pop().toLowerCase();
+          return ['md', 'markdown', 'mdown', 'mkdn'].includes(ext);
+        }
+
+        function isArchiveFile(name) {
+          if (!name) return false;
+          return ['zip'].includes(name.split('.').pop().toLowerCase());
+        }
+
+        function isFontFile(name) {
+          if (!name) return false;
+          return ['ttf', 'otf', 'woff', 'woff2'].includes(name.split('.').pop().toLowerCase());
         }
 
         function isTextFile(name) {
           if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
-          return ['txt', 'log', 'json', 'md', 'sh', 'py', 'js', 'ts', 'go', 'html', 'css', 'yml', 'yaml', 'conf', 'ini', 'sql', 'env', 'bat', 'ps1'].includes(ext);
+          return [
+            'txt', 'log', 'json', 'yaml', 'yml', 'toml', 'xml', 'html', 'htm', 'css', 'scss', 'sass', 'less',
+            'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
+            'py', 'pyw', 'ipynb',
+            'java', 'c', 'cpp', 'cc', 'cxx', 'h', 'hpp', 'hh', 'cs',
+            'go', 'rs', 'php', 'rb', 'swift', 'kt', 'kts', 'scala',
+            'sh', 'bash', 'zsh', 'bat', 'cmd', 'ps1', 'psm1',
+            'sql', 'ini', 'conf', 'config', 'env', 'properties', 'dockerfile', 'makefile'
+          ].includes(ext);
         }
 
         function getFileIcon(name) {
@@ -2591,12 +2762,14 @@
           if (isVideoFile(clean)) return 'fa-regular fa-file-video text-[#ff375f]';
           if (isAudioFile(clean)) return 'fa-regular fa-file-audio text-[#ff9f0a]';
           if (isPdfFile(clean)) return 'fa-regular fa-file-pdf text-[#ff453a]';
+          if (isDocxFile(clean)) return 'fa-regular fa-file-word text-[#0a84ff]';
+          if (isExcelFile(clean)) return 'fa-regular fa-file-excel text-[#30d158]';
           const ext = clean.split('.').pop().toLowerCase();
-          if (['doc', 'docx'].includes(ext)) return 'fa-regular fa-file-word text-[#0a84ff]';
-          if (['xls', 'xlsx', 'csv'].includes(ext)) return 'fa-regular fa-file-excel text-[#30d158]';
-          if (['ppt', 'pptx'].includes(ext)) return 'fa-regular fa-file-powerpoint text-[#ff9f0a]';
+          if (['ppt', 'pptx', 'key'].includes(ext)) return 'fa-regular fa-file-powerpoint text-[#ff9f0a]';
+          if (isMarkdownFile(clean)) return 'fa-brands fa-markdown text-[#0a84ff]';
+          if (isArchiveFile(clean) || ['tar', 'gz', 'rar', '7z', 'iso'].includes(ext)) return 'fa-regular fa-file-zipper text-[#bf5af2]';
+          if (isFontFile(clean)) return 'fa-solid fa-font text-[#bf5af2]';
           if (isTextFile(clean)) return 'fa-regular fa-file-code text-[#0a84ff]';
-          if (['zip', 'tar', 'gz', 'rar', '7z', 'iso'].includes(ext)) return 'fa-regular fa-file-zipper text-[#bf5af2]';
           return 'fa-regular fa-file text-[#8e8e93]';
         }
 
@@ -2607,6 +2780,34 @@
         const previewUrl = ref('');
         const previewTextContent = ref('');
         const textCopied = ref(false);
+
+        // Markdown module
+        const previewMarkdownHtml = ref('');
+        const previewMarkdownMode = ref('rendered');
+
+        // Excel module
+        const previewExcelWorkbook = ref(null);
+        const previewExcelSheets = ref([]);
+        const previewExcelActiveSheet = ref('');
+        const previewExcelHtml = ref('');
+
+        // Archive module
+        const previewZipEntries = ref([]);
+
+        // Font module
+        const previewFontFamily = ref('');
+        const previewFontSize = ref(24);
+
+        function selectExcelSheet(sheetName) {
+          if (!previewExcelWorkbook.value) return;
+          previewExcelActiveSheet.value = sheetName;
+          const ws = previewExcelWorkbook.value.Sheets[sheetName];
+          if (ws && window.XLSX) {
+            previewExcelHtml.value = window.XLSX.utils.sheet_to_html(ws, { editable: false });
+          } else {
+            previewExcelHtml.value = '<div class="p-6 text-center text-[#8e8e93]">Empty sheet</div>';
+          }
+        }
 
         async function openPreview(f) {
           previewFile.value = f;
@@ -2644,6 +2845,84 @@
                 }
               }
             });
+            return;
+          } else if (isMarkdownFile(cleanName)) {
+            previewType.value = 'markdown';
+            previewMarkdownMode.value = 'rendered';
+            previewTextContent.value = 'Loading markdown...';
+            showPreviewModal.value = true;
+            try {
+              const res = await fetch(previewUrl.value);
+              if (res.ok) {
+                const txt = await res.text();
+                previewTextContent.value = txt;
+                previewMarkdownHtml.value = window.marked ? window.marked.parse(txt) : txt;
+              } else {
+                previewMarkdownHtml.value = '<p class="text-[#ff453a]">Failed to load markdown.</p>';
+              }
+            } catch (err) {
+              previewMarkdownHtml.value = '<p class="text-[#ff453a]">' + err.message + '</p>';
+            }
+            return;
+          } else if (isExcelFile(cleanName)) {
+            previewType.value = 'excel';
+            previewExcelSheets.value = [];
+            previewExcelActiveSheet.value = '';
+            previewExcelHtml.value = '<div class="p-8 text-center text-[#8e8e93]"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading spreadsheet...</div>';
+            showPreviewModal.value = true;
+            try {
+              const res = await fetch(previewUrl.value);
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              const buf = await res.arrayBuffer();
+              if (window.XLSX) {
+                const wb = window.XLSX.read(buf, { type: 'array' });
+                previewExcelWorkbook.value = wb;
+                previewExcelSheets.value = wb.SheetNames || [];
+                if (wb.SheetNames && wb.SheetNames.length > 0) {
+                  selectExcelSheet(wb.SheetNames[0]);
+                }
+              }
+            } catch (err) {
+              previewExcelHtml.value = '<div class="p-8 text-center text-[#ff453a]">Failed to parse spreadsheet: ' + err.message + '</div>';
+            }
+            return;
+          } else if (isArchiveFile(cleanName)) {
+            previewType.value = 'archive';
+            previewZipEntries.value = [];
+            showPreviewModal.value = true;
+            try {
+              const res = await fetch(previewUrl.value);
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              const buf = await res.arrayBuffer();
+              if (window.JSZip) {
+                const zip = await window.JSZip.loadAsync(buf);
+                const entries = [];
+                zip.forEach((relPath, zipEntry) => {
+                  entries.push({
+                    name: relPath,
+                    isDir: zipEntry.dir,
+                    size: zipEntry._data ? (zipEntry._data.uncompressedSize || 0) : 0,
+                    date: zipEntry.date
+                  });
+                });
+                previewZipEntries.value = entries;
+              }
+            } catch (err) {
+              previewZipEntries.value = [{ name: 'Failed to inspect zip: ' + err.message, isDir: false, size: 0 }];
+            }
+            return;
+          } else if (isFontFile(cleanName)) {
+            previewType.value = 'font';
+            const fontName = 'CustomFont_' + Date.now();
+            previewFontFamily.value = fontName;
+            try {
+              const fontFace = new FontFace(fontName, `url(${previewUrl.value})`);
+              const loaded = await fontFace.load();
+              document.fonts.add(loaded);
+            } catch (e) {
+              console.warn('Font load error:', e);
+            }
+            showPreviewModal.value = true;
             return;
           } else if (isTextFile(cleanName)) {
             previewType.value = 'text';
@@ -3014,6 +3293,10 @@
           isAudioFile,
           isPdfFile,
           isDocxFile,
+          isExcelFile,
+          isMarkdownFile,
+          isArchiveFile,
+          isFontFile,
           isTextFile,
           showPreviewModal,
           previewFile,
@@ -3021,6 +3304,16 @@
           previewUrl,
           previewTextContent,
           textCopied,
+          previewMarkdownHtml,
+          previewMarkdownMode,
+          previewExcelWorkbook,
+          previewExcelSheets,
+          previewExcelActiveSheet,
+          previewExcelHtml,
+          selectExcelSheet,
+          previewZipEntries,
+          previewFontFamily,
+          previewFontSize,
           openPreview,
           closePreview,
           copyPreviewText,
