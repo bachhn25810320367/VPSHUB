@@ -105,6 +105,9 @@
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+  <!-- Word Docx Previewer (Client-side) -->
+  <script src="https://unpkg.com/docx-preview@0.4.0/dist/docx-preview.min.js"></script>
+
   <style>
     /* Apple HIG Display & Text Rendering Rules */
     html, body {
@@ -704,24 +707,24 @@
           <div class="lg:col-span-4 apple-glass-card p-6 flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-                <h3 class="text-sm font-semibold text-white tracking-headline">Cluster Storage Quota</h3>
-                <span class="text-xs font-medium text-[#0a84ff]">NVMe Pool</span>
+                <h3 class="text-sm font-semibold text-white tracking-headline">Ubuntu Storage Quota</h3>
+                <span class="text-xs font-medium text-[#30d158]">vps2 Pool</span>
               </div>
 
               <div class="my-6">
                 <div class="flex items-baseline justify-between mb-2">
-                  <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">{{ totalDiskUsedGB.toFixed(1) }}</span>
-                  <span class="text-sm text-[#8e8e93] font-mono">/ 90.0 GB ({{ ((totalDiskUsedGB / 90) * 100).toFixed(2) }}%)</span>
+                  <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">{{ storageDisk.usedGB }}</span>
+                  <span class="text-sm text-[#8e8e93] font-mono">/ {{ storageDisk.totalGB }} GB ({{ storageDisk.percent }}%)</span>
                 </div>
                 <div class="w-full h-2 rounded-full bg-[#2c2c2e] overflow-hidden">
-                  <div class="h-full bg-[#0a84ff] rounded-full" :style="{ width: ((totalDiskUsedGB / 90) * 100) + '%' }"></div>
+                  <div class="h-full bg-[#0a84ff] rounded-full transition-all" :style="{ width: storageDisk.percent + '%' }"></div>
                 </div>
               </div>
 
               <div class="space-y-2 text-xs text-[#8e8e93]">
                 <div class="flex justify-between">
                   <span>Available Space:</span>
-                  <span class="text-white font-mono tabular-nums">{{ (90 - totalDiskUsedGB).toFixed(1) }} GB</span>
+                  <span class="text-white font-mono tabular-nums">{{ storageDisk.availGB }} GB</span>
                 </div>
                 <div class="flex justify-between">
                   <span>Direct Cloudflare Stream:</span>
@@ -1360,11 +1363,24 @@
           </div>
 
           <!-- PDF -->
-          <iframe 
-            v-else-if="previewType === 'pdf'" 
-            :src="previewUrl" 
-            class="w-full h-[70vh] rounded-xl bg-white border-0">
-          </iframe>
+          <div v-else-if="previewType === 'pdf'" class="w-full h-[72vh] flex flex-col">
+            <object :data="previewUrl" type="application/pdf" class="w-full flex-1 rounded-xl bg-white border-0">
+              <div class="p-8 text-center text-[#8e8e93] space-y-3">
+                <p class="text-sm text-white">Browser plugin could not display this PDF directly.</p>
+                <a :href="previewUrl" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0a84ff] text-white text-xs font-semibold shadow-apple-cta">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span>Open PDF in New Tab</span>
+                </a>
+              </div>
+            </object>
+          </div>
+
+          <!-- Word (.docx) Document -->
+          <div v-else-if="previewType === 'docx'" class="w-full max-h-[72vh] overflow-y-auto bg-white text-black p-6 rounded-xl shadow-inner font-sans">
+            <div id="docx-container" class="min-h-[220px] flex items-center justify-center text-gray-500 text-sm">
+              <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Rendering Word document...
+            </div>
+          </div>
 
           <!-- Code / Text -->
           <div v-else-if="previewType === 'text'" class="w-full h-full flex flex-col text-left">
@@ -2386,7 +2402,29 @@
 
         const currentStorageServer = computed(() => {
           if (!servers.value || servers.value.length === 0) return null;
-          return servers.value.find(s => s && (s.id === 'vps2' || s.vps_id === 'vps2')) || servers.value.find(s => s && (s.id || s.vps_id)) || servers.value[0];
+          return servers.value.find(s => s && (s.id === 'vps2' || s.vps_id === 'vps2')) || servers.value[0];
+        });
+
+        const storageDisk = computed(() => {
+          const s = currentStorageServer.value;
+          if (s && s.disk && s.disk.total > 0) {
+            const totalGB = s.disk.total / (1024 * 1024 * 1024);
+            const usedGB = s.disk.used / (1024 * 1024 * 1024);
+            const availGB = Math.max(0, totalGB - usedGB);
+            const pct = Math.min(100, Math.max(0, (usedGB / totalGB) * 100));
+            return {
+              totalGB: totalGB.toFixed(1),
+              usedGB: usedGB.toFixed(1),
+              availGB: availGB.toFixed(1),
+              percent: pct.toFixed(2)
+            };
+          }
+          return {
+            totalGB: '61.8',
+            usedGB: '13.0',
+            availGB: '48.8',
+            percent: '21.04'
+          };
         });
 
         const uploadStatus = ref({
@@ -2535,6 +2573,11 @@
           return name.split('.').pop().toLowerCase() === 'pdf';
         }
 
+        function isDocxFile(name) {
+          if (!name) return false;
+          return name.split('.').pop().toLowerCase() === 'docx';
+        }
+
         function isTextFile(name) {
           if (!name) return false;
           const ext = name.split('.').pop().toLowerCase();
@@ -2571,15 +2614,38 @@
           textCopied.value = false;
           previewTextContent.value = '';
 
-          if (isImageFile(f.name)) {
+          const cleanName = decodeURIComponent(f.name || '');
+
+          if (isImageFile(cleanName)) {
             previewType.value = 'image';
-          } else if (isVideoFile(f.name)) {
+          } else if (isVideoFile(cleanName)) {
             previewType.value = 'video';
-          } else if (isAudioFile(f.name)) {
+          } else if (isAudioFile(cleanName)) {
             previewType.value = 'audio';
-          } else if (isPdfFile(f.name)) {
+          } else if (isPdfFile(cleanName)) {
             previewType.value = 'pdf';
-          } else if (isTextFile(f.name)) {
+          } else if (isDocxFile(cleanName)) {
+            previewType.value = 'docx';
+            showPreviewModal.value = true;
+            nextTick(async () => {
+              try {
+                const res = await fetch(previewUrl.value);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const blob = await res.blob();
+                const container = document.getElementById('docx-container');
+                if (container && window.docx) {
+                  container.innerHTML = '';
+                  await window.docx.renderAsync(blob, container);
+                }
+              } catch (err) {
+                const container = document.getElementById('docx-container');
+                if (container) {
+                  container.innerHTML = '<div class="p-8 text-center text-[#ff453a] space-y-2"><p class="font-semibold">Unable to render Word preview</p><p class="text-xs text-gray-500">' + err.message + '</p></div>';
+                }
+              }
+            });
+            return;
+          } else if (isTextFile(cleanName)) {
             previewType.value = 'text';
             previewTextContent.value = 'Loading file contents...';
             try {
@@ -2919,6 +2985,7 @@
           // Storage
           selectedStorageServerId,
           currentStorageServer,
+          storageDisk,
           files,
           uploadStatus,
           loadFilesForSelectedServer,
@@ -2946,6 +3013,7 @@
           isVideoFile,
           isAudioFile,
           isPdfFile,
+          isDocxFile,
           isTextFile,
           showPreviewModal,
           previewFile,
