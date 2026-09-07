@@ -793,7 +793,7 @@
                     <tr v-for="f in files" :key="f.name" class="hover:bg-white/[0.03] transition-colors group">
                       <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
                         <i :class="getFileIcon(f.name)"></i>
-                        <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" title="Click to preview">{{ f.name }}</span>
+                        <span @click="openPreview(f)" class="text-white font-medium truncate cursor-pointer hover:text-[#0a84ff] transition-colors" :title="decodeURIComponent(f.name)">{{ decodeURIComponent(f.name) }}</span>
                       </td>
                       <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
                         {{ formatBytes(f.size) }}
@@ -2404,7 +2404,10 @@
             const res = await fetch('/api/files/list?vps_id=vps2');
             if (res.ok) {
               const data = await res.json();
-              files.value = data.files || [];
+              files.value = (data.files || []).map(f => {
+                try { f.name = decodeURIComponent(f.name); } catch(e) {}
+                return f;
+              });
             }
           } catch (e) {
             files.value = [];
@@ -2540,12 +2543,16 @@
 
         function getFileIcon(name) {
           if (!name) return 'fa-regular fa-file text-[#8e8e93]';
-          if (isImageFile(name)) return 'fa-regular fa-file-image text-[#30d158]';
-          if (isVideoFile(name)) return 'fa-regular fa-file-video text-[#ff375f]';
-          if (isAudioFile(name)) return 'fa-regular fa-file-audio text-[#ff9f0a]';
-          if (isPdfFile(name)) return 'fa-regular fa-file-pdf text-[#ff453a]';
-          if (isTextFile(name)) return 'fa-regular fa-file-code text-[#0a84ff]';
-          const ext = name.split('.').pop().toLowerCase();
+          const clean = decodeURIComponent(name);
+          if (isImageFile(clean)) return 'fa-regular fa-file-image text-[#30d158]';
+          if (isVideoFile(clean)) return 'fa-regular fa-file-video text-[#ff375f]';
+          if (isAudioFile(clean)) return 'fa-regular fa-file-audio text-[#ff9f0a]';
+          if (isPdfFile(clean)) return 'fa-regular fa-file-pdf text-[#ff453a]';
+          const ext = clean.split('.').pop().toLowerCase();
+          if (['doc', 'docx'].includes(ext)) return 'fa-regular fa-file-word text-[#0a84ff]';
+          if (['xls', 'xlsx', 'csv'].includes(ext)) return 'fa-regular fa-file-excel text-[#30d158]';
+          if (['ppt', 'pptx'].includes(ext)) return 'fa-regular fa-file-powerpoint text-[#ff9f0a]';
+          if (isTextFile(clean)) return 'fa-regular fa-file-code text-[#0a84ff]';
           if (['zip', 'tar', 'gz', 'rar', '7z', 'iso'].includes(ext)) return 'fa-regular fa-file-zipper text-[#bf5af2]';
           return 'fa-regular fa-file text-[#8e8e93]';
         }
@@ -2622,11 +2629,11 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                vps_id: currentStorageServer.value.id,
-                vps_name: currentStorageServer.value.name,
+                vps_id: 'vps2',
+                vps_name: 'Ubuntu',
                 file_name: f.name,
                 file_size: f.size,
-                tunnel_url: currentStorageServer.value.tunnel_url
+                tunnel_url: 'https://vps2.hoangngocbach.id.vn'
               })
             });
             if (res.ok) {

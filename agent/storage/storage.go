@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,6 +54,10 @@ func (sm *StorageManager) HandleUploadChunk(w http.ResponseWriter, r *http.Reque
 	if uploadID == "" || chunkIndexStr == "" || totalChunksStr == "" || fileName == "" {
 		http.Error(w, `{"error":"Missing required upload headers"}`, http.StatusBadRequest)
 		return
+	}
+
+	if unescaped, err := url.QueryUnescape(fileName); err == nil && unescaped != "" {
+		fileName = unescaped
 	}
 
 	// Sanitize fileName to prevent directory traversal
@@ -200,8 +205,14 @@ func (sm *StorageManager) HandleDownloadFile(w http.ResponseWriter, r *http.Requ
 	targetPath := filepath.Join(sm.uploadDir, fileName)
 
 	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
+		// Fallback: try raw escaped name if uploaded by older client
+		escapedPath := filepath.Join(sm.uploadDir, url.QueryEscape(fileName))
+		if _, err2 := os.Stat(escapedPath); err2 == nil {
+			targetPath = escapedPath
+		} else {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
 	}
 
 	// http.ServeFile handles Range requests, mime types, and streaming automatically
@@ -218,6 +229,13 @@ func (sm *StorageManager) HandleDeleteFile(w http.ResponseWriter, r *http.Reques
 
 	fileName = filepath.Base(fileName)
 	targetPath := filepath.Join(sm.uploadDir, fileName)
+
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		escapedPath := filepath.Join(sm.uploadDir, url.QueryEscape(fileName))
+		if _, err2 := os.Stat(escapedPath); err2 == nil {
+			targetPath = escapedPath
+		}
+	}
 
 	if err := os.Remove(targetPath); err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"Failed to delete file: %v"}`, err), http.StatusInternalServerError)

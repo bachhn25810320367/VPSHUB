@@ -717,9 +717,20 @@ export async function onRequest(context) {
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const fwd = new Headers();
-    for (const k of ["Upload-Id", "Chunk-Index", "Total-Chunks", "File-Name"]) {
+    for (const k of ["Upload-Id", "Chunk-Index", "Total-Chunks"]) {
       const v = request.headers.get(k) || request.headers.get(k.toLowerCase());
       if (v) fwd.set(k, v);
+    }
+    const rawFileName = request.headers.get("File-Name") || request.headers.get("file-name") || "";
+    if (rawFileName) {
+      let decodedName = rawFileName;
+      try { decodedName = decodeURIComponent(rawFileName); } catch (e) {}
+      const utf8Bytes = new TextEncoder().encode(decodedName);
+      let byteStr = "";
+      for (let j = 0; j < utf8Bytes.length; j++) {
+        byteStr += String.fromCharCode(utf8Bytes[j]);
+      }
+      fwd.set("File-Name", byteStr);
     }
     fwd.set("X-Agent-Secret", secret);
     try {
