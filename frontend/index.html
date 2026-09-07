@@ -763,17 +763,13 @@
                   <span class="text-xs text-[#8e8e93] font-mono">({{ files.length }} items)</span>
                 </div>
 
-                <!-- Select Target Node -->
+                <!-- Target Node Indicator -->
                 <div class="flex items-center gap-2">
-                  <span class="text-xs text-[#8e8e93] hidden sm:inline">Drive Node:</span>
-                  <select 
-                    v-model="selectedStorageServerId"
-                    @change="loadFilesForSelectedServer"
-                    class="bg-[#1c1c1e] text-white text-xs rounded-[9px] px-3 py-1.5 border border-white/10 outline-none font-mono cursor-pointer">
-                    <option v-for="s in servers" :key="s.id" :value="s.id" class="bg-[#1c1c1e]">
-                      {{ s.name }}
-                    </option>
-                  </select>
+                  <span class="text-xs text-[#8e8e93] hidden sm:inline">Storage Node:</span>
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-[9px] bg-[#30d158]/15 border border-[#30d158]/25 text-[#30d158] text-xs font-mono font-medium">
+                    <i class="fa-brands fa-ubuntu text-sm"></i>
+                    <span>Ubuntu (vps2)</span>
+                  </div>
                 </div>
               </div>
 
@@ -2100,8 +2096,7 @@
         }
 
         function openDriveForCurrentServer() {
-          if (!activeServerModal.value) return;
-          selectedStorageServerId.value = activeServerModal.value.id;
+          selectedStorageServerId.value = 'vps2';
           activeServerModal.value = null;
           activeTab.value = 'storage';
           loadFilesForSelectedServer();
@@ -2385,18 +2380,13 @@
           });
         }
 
-        // ================= Storage Module =================
-        const selectedStorageServerId = ref('vps1');
-        const files = ref([
-          { name: 'backup-database-2026-09-01.tar.gz', size: 145000000, modTime: '2026-09-01T14:30:00Z' },
-          { name: 'cloudflared-tunnel.config.yml', size: 2450, modTime: '2026-09-03T09:12:00Z' },
-          { name: 'docker-compose.beszel.yaml', size: 1820, modTime: '2026-09-04T18:40:00Z' },
-          { name: 'system-inventory-report.json', size: 68400, modTime: '2026-09-05T11:05:00Z' }
-        ]);
+        // ================= Storage Module (Ubuntu vps2 Central Pool) =================
+        const selectedStorageServerId = ref('vps2');
+        const files = ref([]);
 
         const currentStorageServer = computed(() => {
           if (!servers.value || servers.value.length === 0) return null;
-          return servers.value.find(s => s && (s.id === selectedStorageServerId.value || s.vps_id === selectedStorageServerId.value)) || servers.value.find(s => s && (s.id || s.vps_id)) || servers.value[0];
+          return servers.value.find(s => s && (s.id === 'vps2' || s.vps_id === 'vps2')) || servers.value.find(s => s && (s.id || s.vps_id)) || servers.value[0];
         });
 
         const uploadStatus = ref({
@@ -2410,16 +2400,15 @@
         });
 
         async function loadFilesForSelectedServer() {
-          const srv = currentStorageServer.value;
-          if (!srv) return;
-          const vid = srv.id || srv.vps_id || '';
           try {
-            const res = await fetch(`/api/files/list?vps_id=${encodeURIComponent(vid)}`);
+            const res = await fetch('/api/files/list?vps_id=vps2');
             if (res.ok) {
               const data = await res.json();
-              if (data.files) files.value = data.files;
+              files.value = data.files || [];
             }
-          } catch (e) {}
+          } catch (e) {
+            files.value = [];
+          }
         }
 
         async function handleFileSelected(e) {

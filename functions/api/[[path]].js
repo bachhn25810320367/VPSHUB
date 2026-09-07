@@ -661,14 +661,13 @@ export async function onRequest(context) {
 
   // 6b. GET /api/files/download (Private authenticated proxy to agent)
   if (path === "/api/files/download" && method === "GET") {
-    const vpsId = url.searchParams.get("vps_id") || url.searchParams.get("vpsId") || url.searchParams.get("id") || "";
+    const vpsId = url.searchParams.get("vps_id") || url.searchParams.get("vpsId") || url.searchParams.get("id") || "vps2";
     const fileName = url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
     if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
-    let srv = null;
-    if (vpsId) srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase());
-    // fallback: if vps_id missing, try to infer from file share? else pick vps1 only if single
-    if (!srv && vpsId) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
-    if (!srv) srv = DEFAULT_SERVERS[0];
+    if (vpsId === "vps1") {
+      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2).", vps_id: "vps1" }, 400);
+    }
+    let srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase()) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const agentUrl = `${srv.tunnelUrl}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(secret)}`;
     const fwd = new Headers();
@@ -693,9 +692,11 @@ export async function onRequest(context) {
 
   // 6c. GET /api/files/list (Private proxy to agent)
   if (path === "/api/files/list" && method === "GET") {
-    const vpsId = url.searchParams.get("vps_id") || "";
-    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    if (vpsId === "vps1") {
+      return jsonResponse({ files: [], total: 0, note: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2)." }, 200);
+    }
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/list`, { headers: { "X-Agent-Secret": secret } });
@@ -709,9 +710,11 @@ export async function onRequest(context) {
 
   // 6d. POST /api/files/upload-chunk (Private proxy to agent, streams body)
   if (path === "/api/files/upload-chunk" && method === "POST") {
-    const vpsId = url.searchParams.get("vps_id") || "";
-    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    if (vpsId === "vps1") {
+      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Please upload files to Ubuntu (vps2)." }, 400);
+    }
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const fwd = new Headers();
     for (const k of ["Upload-Id", "Chunk-Index", "Total-Chunks", "File-Name"]) {
@@ -730,11 +733,13 @@ export async function onRequest(context) {
 
   // 6e. DELETE /api/files/delete (Private proxy to agent)
   if (path === "/api/files/delete" && method === "DELETE") {
-    const vpsId = url.searchParams.get("vps_id") || "";
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
     const fileName = url.searchParams.get("name") || "";
     if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
-    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS[0];
-    if (vpsId && !DEFAULT_SERVERS.some(s => s.id === vpsId)) return jsonResponse({ error: "Unknown vps_id: " + vpsId }, 400);
+    if (vpsId === "vps1") {
+      return jsonResponse({ error: "WindowServer (vps1) is compute-only." }, 400);
+    }
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
       const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
