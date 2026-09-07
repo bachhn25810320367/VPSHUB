@@ -113,6 +113,8 @@
 
   <!-- Markdown Renderer (marked.js) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- DOMPurify (XSS sanitize for v-html: markdown + excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 
   <!-- Excel Spreadsheet Viewer (SheetJS) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -231,7 +233,6 @@
           <button type="submit" class="w-full py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all">
             Sign In to Dashboard
           </button>
-          <p class="text-[10px] text-center text-[#636366]">Default: admin / hoangngocbach</p>
         </form>
       </div>
     </div>
@@ -2303,6 +2304,54 @@
   <script>
     const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
 
+    // Attach stored auth token to all private /api/* requests.
+    // Public endpoints stay open: /api/auth/login, GET /api/files/share, /api/files/share/raw
+    const VPS_TOKEN_KEY = 'vps_hub_token';
+    function authHeader() {
+      try {
+        const t = localStorage.getItem(VPS_TOKEN_KEY);
+        return t ? { 'Authorization': 'Bearer ' + t } : {};
+      } catch (e) { return {}; }
+    }
+    // Escape raw text before embedding in HTML error strings (defense-in-depth)
+    function escHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    // Sanitize rich HTML only from trusted libs (marked / sheet_to_html), strip scripts + event handlers
+    function sanitizeHtml(dirty) {
+      try {
+        if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+          return window.DOMPurify.sanitize(dirty, {
+            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'base', 'link', 'meta'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'style'],
+            ALLOW_DATA_ATTR: false
+          });
+        }
+      } catch (e) {}
+      // No sanitizer loaded: refuse to render rich HTML rather than risk XSS
+      return '';
+    }
+    const _nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      try {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        const m = (init && init.method ? init.method : 'GET').toUpperCase();
+        const isApi = typeof url === 'string' && url.startsWith('/api/');
+        const isPublic = url.startsWith('/api/auth/login')
+          || url.startsWith('/api/files/share/raw')
+          || (url.startsWith('/api/files/share') && m === 'GET');
+        if (isApi && !isPublic) {
+          init = { ...init, headers: { ...(init.headers || {}), ...authHeader() } };
+        }
+      } catch (e) {}
+      return _nativeFetch(input, init);
+    };
+
     createApp({
       setup() {
         // Authentication Gate State
@@ -2343,18 +2392,7 @@
               return;
             }
           } catch (netErr) {
-            // Fallback to local credential check if network offline
-            const validUser = (u === 'admin' || u === 'bachhoang');
-            const validPass = (p === 'hoangngocbach');
-            if (validUser && validPass) {
-              isAuthenticated.value = true;
-              currentUsername.value = u;
-              localStorage.setItem('vps_hub_auth', 'true');
-              localStorage.setItem('vps_hub_user', u);
-              loginError.value = '';
-            } else {
-              loginError.value = 'Invalid username or password';
-            }
+            loginError.value = 'Unable to reach authentication server. Please check your network and try again.';
           }
         }
 
@@ -2393,6 +2431,8 @@
           if (confirm('Are you sure you want to sign out from VPS Hub?')) {
             isAuthenticated.value = false;
             localStorage.removeItem('vps_hub_auth');
+            localStorage.removeItem('vps_hub_user');
+            localStorage.removeItem('vps_hub_token');
           }
         }
 
@@ -3623,7 +3663,8 @@
           previewExcelActiveSheet.value = sheetName;
           const ws = previewExcelWorkbook.value.Sheets[sheetName];
           if (ws && window.XLSX) {
-            previewExcelHtml.value = window.XLSX.utils.sheet_to_html(ws, { editable: false });
+            const raw = window.XLSX.utils.sheet_to_html(ws, { editable: false });
+            previewExcelHtml.value = sanitizeHtml(raw);
           } else {
             previewExcelHtml.value = '<div class="p-6 text-center text-[#8e8e93]">Empty sheet</div>';
           }
@@ -3661,7 +3702,7 @@
               } catch (err) {
                 const container = document.getElementById('docx-container');
                 if (container) {
-                  container.innerHTML = '<div class="p-8 text-center text-[#ff453a] space-y-2"><p class="font-semibold">Unable to render Word preview</p><p class="text-xs text-gray-500">' + err.message + '</p></div>';
+                  container.innerHTML = '<div class="p-8 text-center text-[#ff453a] space-y-2"><p class="font-semibold">Unable to render Word preview</p><p class="text-xs text-gray-500">' + escHtml(err.message) + '</p></div>';
                 }
               }
             });
@@ -3676,12 +3717,12 @@
               if (res.ok) {
                 const txt = await res.text();
                 previewTextContent.value = txt;
-                previewMarkdownHtml.value = window.marked ? window.marked.parse(txt) : txt;
+                previewMarkdownHtml.value = window.marked ? sanitizeHtml(window.marked.parse(txt)) : escHtml(txt);
               } else {
                 previewMarkdownHtml.value = '<p class="text-[#ff453a]">Failed to load markdown.</p>';
               }
             } catch (err) {
-              previewMarkdownHtml.value = '<p class="text-[#ff453a]">' + err.message + '</p>';
+              previewMarkdownHtml.value = '<p class="text-[#ff453a]">' + escHtml(err.message) + '</p>';
             }
             return;
           } else if (isExcelFile(cleanName)) {
@@ -3703,7 +3744,7 @@
                 }
               }
             } catch (err) {
-              previewExcelHtml.value = '<div class="p-8 text-center text-[#ff453a]">Failed to parse spreadsheet: ' + err.message + '</div>';
+              previewExcelHtml.value = '<div class="p-8 text-center text-[#ff453a]">Failed to parse spreadsheet: ' + escHtml(err.message) + '</div>';
             }
             return;
           } else if (isArchiveFile(cleanName)) {

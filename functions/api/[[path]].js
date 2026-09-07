@@ -186,6 +186,75 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+// ---- User session helpers (Bearer token issued at /api/auth/login) ----
+const SESSION_TTL_MS = 7 * 24 * 3600 * 1000; // 7 days
+
+async function createSession(env, username, token) {
+  try {
+    const now = Date.now();
+    await cosmosCreateItem(env, "expenses", {
+      id: token,
+      category: "auth_session",
+      username,
+      created_at: new Date(now).toISOString(),
+      expires_at: new Date(now + SESSION_TTL_MS).toISOString()
+    }, "auth_session");
+  } catch (e) {}
+}
+
+async function verifySession(env, request) {
+  // Local dev without Cosmos key: skip enforcement (dev-server has no auth anyway)
+  if (!env.COSMOS_KEY) return { ok: true, dev: true };
+  const hdr = request.headers.get("Authorization") || "";
+  const m = hdr.match(/^Bearer\s+(.+)$/i);
+  const token = m ? m[1].trim() : "";
+  if (!token) return { ok: false };
+  try {
+    const docs = await cosmosQuery(
+      env,
+      "expenses",
+      "SELECT * FROM c WHERE c.category = 'auth_session' AND c.id = @id",
+      [{ name: "@id", value: token }],
+      "auth_session"
+    );
+    const s = docs && docs[0];
+    if (!s) return { ok: false };
+    if (s.expires_at && new Date(s.expires_at).getTime() < Date.now()) return { ok: false };
+    return { ok: true, username: s.username };
+  } catch (e) {
+    return { ok: false };
+  }
+}
+
+function isPublicRoute(path, method) {
+  if (path === "/api/auth/login" && method === "POST") return true;
+  if (path === "/api/files/share/raw") return true; // password gate lives inside handler
+  if (path === "/api/files/share" && method === "GET") return true; // metadata by id; list-all guarded below
+  if (path === "/api/telemetry" && method === "POST") return true; // Go agent uses X-Agent-Secret
+  return false;
+}
+
+async function requireAuth(env, request, path, method) {
+  // GET /api/files/share without id = list all shares -> private
+  if (path === "/api/files/share" && method === "GET") {
+    try {
+      const u = new URL(request.url);
+      if (!u.searchParams.get("id")) {
+        const s = await verifySession(env, request);
+        if (!s.ok) return jsonResponse({ error: "Unauthorized: login required" }, 401);
+      }
+    } catch (e) {}
+    return null;
+  }
+  if (isPublicRoute(path, method)) return null;
+  // Everything else under /api/* is private
+  if (path.startsWith("/api/")) {
+    const s = await verifySession(env, request);
+    if (!s.ok) return jsonResponse({ error: "Unauthorized: login required" }, 401);
+  }
+  return null;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -202,6 +271,12 @@ export async function onRequest(context) {
         "Access-Control-Allow-Headers": "Content-Type, X-Agent-Secret, Authorization"
       }
     });
+  }
+
+  // ---- Enforce Bearer session on all private /api/* (public list above stays open) ----
+  {
+    const err = await requireAuth(env, request, path, method);
+    if (err) return err;
   }
 
   // 0. Authentication Endpoints (Stored in Azure Cosmos DB)
@@ -245,6 +320,7 @@ export async function onRequest(context) {
       }
 
       const token = `vpshub_token_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      await createSession(env, user.username, token);
       return jsonResponse({
         success: true,
         token,
