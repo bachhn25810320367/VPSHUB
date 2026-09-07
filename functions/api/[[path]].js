@@ -546,9 +546,14 @@ export async function onRequest(context) {
     if (method === "POST") {
       try {
         const body = await request.json();
-        const { vps_id, vps_name, file_name, file_size, tunnel_url } = body;
+        const { vps_id, vps_name, file_name, file_size, tunnel_url, password, expires_in_hours } = body;
         if (!file_name || !vps_id) {
           return jsonResponse({ error: "Missing required parameters" }, 400);
+        }
+
+        let expiresAt = null;
+        if (expires_in_hours && Number(expires_in_hours) > 0) {
+          expiresAt = new Date(Date.now() + Number(expires_in_hours) * 3600 * 1000).toISOString();
         }
 
         const shareId = `share_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
@@ -560,6 +565,8 @@ export async function onRequest(context) {
           file_name,
           file_size: Number(file_size) || 0,
           tunnel_url: tunnel_url || "",
+          password: password ? String(password).trim() : "",
+          expires_at: expiresAt,
           created_at: new Date().toISOString(),
           download_count: 0
         };
@@ -571,7 +578,9 @@ export async function onRequest(context) {
           share_url: `https://vps.hoangngocbach.id.vn/?share=${shareId}`,
           raw_url: `/api/files/share/raw?id=${shareId}`,
           file_name,
-          file_size: shareDoc.file_size
+          file_size: shareDoc.file_size,
+          has_password: !!shareDoc.password,
+          expires_at: shareDoc.expires_at
         });
       } catch (e) {
         return jsonResponse({ error: "Failed to create share: " + e.message }, 500);
@@ -596,7 +605,19 @@ export async function onRequest(context) {
       if (!docs || docs.length === 0) {
         return jsonResponse({ error: "Share link not found or expired" }, 404);
       }
-      return jsonResponse(docs[0]);
+      const doc = docs[0];
+      if (doc.expires_at && new Date(doc.expires_at).getTime() < Date.now()) {
+        return jsonResponse({ error: "This share link has expired", expired: true }, 410);
+      }
+      return jsonResponse({
+        id: doc.id,
+        file_name: doc.file_name,
+        file_size: doc.file_size,
+        vps_name: doc.vps_name,
+        created_at: doc.created_at,
+        expires_at: doc.expires_at,
+        has_password: !!doc.password
+      });
     }
 
     // DELETE: Revoke public share
@@ -625,6 +646,16 @@ export async function onRequest(context) {
     }
 
     const share = docs[0];
+    if (share.expires_at && new Date(share.expires_at).getTime() < Date.now()) {
+      return jsonResponse({ error: "This share link has expired", expired: true }, 410);
+    }
+
+    if (share.password) {
+      const clientPass = url.searchParams.get("pwd") || url.searchParams.get("password") || request.headers.get("X-Share-Password") || "";
+      if (clientPass !== share.password) {
+        return jsonResponse({ error: "Password protected file. Enter correct password to access.", need_password: true }, 401);
+      }
+    }
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     const agentUrl = `${share.tunnel_url}/api/files/download?name=${encodeURIComponent(share.file_name)}&token=${encodeURIComponent(secret)}`;
 
@@ -662,14 +693,14 @@ export async function onRequest(context) {
   // 6b. GET /api/files/download (Private authenticated proxy to agent)
   if (path === "/api/files/download" && method === "GET") {
     const vpsId = url.searchParams.get("vps_id") || url.searchParams.get("vpsId") || url.searchParams.get("id") || "vps2";
-    const fileName = url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
-    if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
+    const fileName = url.searchParams.get("path") || url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
+    if (!fileName) return jsonResponse({ error: "Missing file name or path" }, 400);
     if (vpsId === "vps1") {
       return jsonResponse({ error: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2).", vps_id: "vps1" }, 400);
     }
     let srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase()) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
-    const agentUrl = `${srv.tunnelUrl}/api/files/download?name=${encodeURIComponent(fileName)}&token=${encodeURIComponent(secret)}`;
+    const agentUrl = `${srv.tunnelUrl}/api/files/download?path=${encodeURIComponent(fileName)}&token=${encodeURIComponent(secret)}`;
     const fwd = new Headers();
     const range = request.headers.get("Range");
     if (range) fwd.set("Range", range);
@@ -681,9 +712,9 @@ export async function onRequest(context) {
       const h = new Headers(r.headers);
       h.set("Access-Control-Allow-Origin", "*");
       const isDl = url.searchParams.get("download") === "1";
-      // Force correct disposition: browser <a download> needs attachment
-      if (isDl) h.set("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
-      else if (!h.get("Content-Disposition")) h.set("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
+      const baseName = fileName.split("/").pop();
+      if (isDl) h.set("Content-Disposition", `attachment; filename="${encodeURIComponent(baseName)}"`);
+      else if (!h.get("Content-Disposition")) h.set("Content-Disposition", `inline; filename="${encodeURIComponent(baseName)}"`);
       return new Response(r.body, { status: r.status, headers: h });
     } catch (e) {
       return jsonResponse({ error: "Proxy to agent failed: " + e.message, tunnel: agentUrl.replace(secret, "***") }, 502);
@@ -693,13 +724,14 @@ export async function onRequest(context) {
   // 6c. GET /api/files/list (Private proxy to agent)
   if (path === "/api/files/list" && method === "GET") {
     const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const relPath = url.searchParams.get("path") || "";
     if (vpsId === "vps1") {
       return jsonResponse({ files: [], total: 0, note: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2)." }, 200);
     }
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
-      const r = await fetch(`${srv.tunnelUrl}/api/files/list`, { headers: { "X-Agent-Secret": secret } });
+      const r = await fetch(`${srv.tunnelUrl}/api/files/list?path=${encodeURIComponent(relPath)}`, { headers: { "X-Agent-Secret": secret } });
       if (!r.ok) {
         return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
       }
@@ -711,6 +743,7 @@ export async function onRequest(context) {
   // 6d. POST /api/files/upload-chunk (Private proxy to agent, streams body)
   if (path === "/api/files/upload-chunk" && method === "POST") {
     const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const targetDir = url.searchParams.get("dir") || url.searchParams.get("path") || "";
     if (vpsId === "vps1") {
       return jsonResponse({ error: "WindowServer (vps1) is compute-only. Please upload files to Ubuntu (vps2)." }, 400);
     }
@@ -730,7 +763,7 @@ export async function onRequest(context) {
     }
     fwd.set("X-Agent-Secret", secret);
     try {
-      const agentUrl = `${srv.tunnelUrl}/api/files/upload-chunk?file_name=${encodeURIComponent(decodedName || rawFileName)}`;
+      const agentUrl = `${srv.tunnelUrl}/api/files/upload-chunk?file_name=${encodeURIComponent(decodedName || rawFileName)}&dir=${encodeURIComponent(targetDir)}`;
       const r = await fetch(agentUrl, { method: "POST", headers: fwd, body: request.body });
       if (!r.ok) {
         return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
@@ -739,23 +772,96 @@ export async function onRequest(context) {
     } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
   }
 
-  // 6e. DELETE /api/files/delete (Private proxy to agent)
+  // 6e. DELETE /api/files/delete (Private proxy to agent - soft delete)
   if (path === "/api/files/delete" && method === "DELETE") {
     const vpsId = url.searchParams.get("vps_id") || "vps2";
-    const fileName = url.searchParams.get("name") || "";
-    if (!fileName) return jsonResponse({ error: "Missing file name" }, 400);
+    const targetPath = url.searchParams.get("path") || url.searchParams.get("name") || "";
+    if (!targetPath) return jsonResponse({ error: "Missing file path" }, 400);
     if (vpsId === "vps1") {
       return jsonResponse({ error: "WindowServer (vps1) is compute-only." }, 400);
     }
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
     try {
-      const r = await fetch(`${srv.tunnelUrl}/api/files/delete?name=${encodeURIComponent(fileName)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      const r = await fetch(`${srv.tunnelUrl}/api/files/delete?path=${encodeURIComponent(targetPath)}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
       if (!r.ok) {
         return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: agent returned ${r.status}`, vps_id: srv.id }, 502);
       }
       return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
     } catch (e) { return jsonResponse({ error: `Tunnel ${srv.id} (${srv.tunnelUrl}) unreachable: ` + e.message, vps_id: srv.id }, 502); }
+  }
+
+  // 6f. POST /api/files/create-folder
+  if (path === "/api/files/create-folder" && method === "POST") {
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/create-folder${url.search}`, { method: "POST", headers: { "X-Agent-Secret": secret }, body: request.body });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6g. POST /api/files/rename
+  if (path === "/api/files/rename" && method === "POST") {
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/rename${url.search}`, { method: "POST", headers: { "X-Agent-Secret": secret }, body: request.body });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6h. POST /api/files/move
+  if (path === "/api/files/move" && method === "POST") {
+    const vpsId = url.searchParams.get("vps_id") || "vps2";
+    const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/move${url.search}`, { method: "POST", headers: { "X-Agent-Secret": secret }, body: request.body });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6i. GET /api/files/trash/list
+  if (path === "/api/files/trash/list" && method === "GET") {
+    const srv = DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/trash/list`, { headers: { "X-Agent-Secret": secret } });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6j. POST /api/files/trash/restore
+  if (path === "/api/files/trash/restore" && method === "POST") {
+    const srv = DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/trash/restore${url.search}`, { method: "POST", headers: { "X-Agent-Secret": secret } });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6k. DELETE /api/files/trash/empty
+  if (path === "/api/files/trash/empty" && (method === "DELETE" || method === "POST")) {
+    const srv = DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/trash/empty`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
+  }
+
+  // 6l. DELETE /api/files/trash/delete
+  if (path === "/api/files/trash/delete" && method === "DELETE") {
+    const srv = DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
+    const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
+    try {
+      const r = await fetch(`${srv.tunnelUrl}/api/files/trash/delete${url.search}`, { method: "DELETE", headers: { "X-Agent-Secret": secret } });
+      return new Response(await r.text(), { status: r.status, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json; charset=utf-8" } });
+    } catch (e) { return jsonResponse({ error: e.message }, 502); }
   }
 
   // 6f. GET /api/files/archive-inspect (Inspect rar, zip, 7z, tar, gz)

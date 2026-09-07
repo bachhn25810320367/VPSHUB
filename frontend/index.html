@@ -284,8 +284,30 @@
 
           <!-- Active File Content -->
           <div v-else-if="publicShareData" class="space-y-6">
-            <!-- File Info Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+            <!-- Direct Download CTA or Password Unlock -->
+            <div v-if="publicShareData.has_password && !publicShareUnlocked" class="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-3">
+              <div class="flex items-center gap-2 text-xs text-[#ff9f0a]">
+                <i class="fa-solid fa-lock"></i>
+                <span class="font-medium">This shared file is password protected</span>
+              </div>
+              <div class="flex gap-2">
+                <input 
+                  type="password" 
+                  v-model="clientSharePassword" 
+                  @keydown.enter="unlockPublicShare"
+                  placeholder="Enter share password..." 
+                  class="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/15 text-xs text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#0a84ff]">
+                <button 
+                  @click="unlockPublicShare" 
+                  class="px-4 py-2 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] text-white text-xs font-semibold shadow-apple-cta transition-all">
+                  Unlock
+                </button>
+              </div>
+              <p v-if="publicSharePasswordError" class="text-[11px] text-[#ff453a]">{{ publicSharePasswordError }}</p>
+            </div>
+
+            <!-- Download CTA when unlocked or no password -->
+            <div v-else class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
               <div class="flex items-center gap-3 truncate">
                 <div class="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
                   <i :class="getFileIcon(publicShareData.file_name)"></i>
@@ -296,13 +318,14 @@
                   </h2>
                   <p class="text-xs text-[#8e8e93] font-mono mt-0.5">
                     {{ formatBytes(publicShareData.file_size) }} · Node: {{ publicShareData.vps_name }}
+                    <span v-if="publicShareData.expires_at" class="text-[#ff9f0a] ml-2">Expires: {{ formatDate(publicShareData.expires_at) }}</span>
                   </p>
                 </div>
               </div>
 
               <!-- Direct Download CTA -->
               <a 
-                :href="'/api/files/share/raw?id=' + publicShareData.id + '&download=1'"
+                :href="'/api/files/share/raw?id=' + publicShareData.id + '&download=1' + (clientSharePassword ? '&pwd=' + encodeURIComponent(clientSharePassword) : '')"
                 class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all flex-shrink-0">
                 <i class="fa-solid fa-download"></i>
                 <span>Download File</span>
@@ -752,7 +775,7 @@
             <div class="space-y-1">
               <!-- My Files -->
               <button 
-                @click="selectedStorageCategory = 'all'" 
+                @click="selectStorageCategory('all')" 
                 :class="selectedStorageCategory === 'all' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -764,7 +787,7 @@
 
               <!-- Photos -->
               <button 
-                @click="selectedStorageCategory = 'photos'" 
+                @click="selectStorageCategory('photos')" 
                 :class="selectedStorageCategory === 'photos' ? 'bg-[#30d158]/15 text-[#30d158] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -776,7 +799,7 @@
 
               <!-- Videos -->
               <button 
-                @click="selectedStorageCategory = 'videos'" 
+                @click="selectStorageCategory('videos')" 
                 :class="selectedStorageCategory === 'videos' ? 'bg-[#ff375f]/15 text-[#ff375f] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -788,7 +811,7 @@
 
               <!-- Music -->
               <button 
-                @click="selectedStorageCategory = 'music'" 
+                @click="selectStorageCategory('music')" 
                 :class="selectedStorageCategory === 'music' ? 'bg-[#ff9f0a]/15 text-[#ff9f0a] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -800,7 +823,7 @@
 
               <!-- Documents -->
               <button 
-                @click="selectedStorageCategory = 'documents'" 
+                @click="selectStorageCategory('documents')" 
                 :class="selectedStorageCategory === 'documents' ? 'bg-[#0a84ff]/15 text-[#0a84ff] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -812,7 +835,7 @@
 
               <!-- Shared with me -->
               <button 
-                @click="selectedStorageCategory = 'shared_with_me'" 
+                @click="selectStorageCategory('shared_with_me')" 
                 :class="selectedStorageCategory === 'shared_with_me' ? 'bg-[#bf5af2]/15 text-[#bf5af2] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
@@ -823,13 +846,14 @@
 
               <!-- Trash -->
               <button 
-                @click="selectedStorageCategory = 'trash'" 
+                @click="selectStorageCategory('trash')" 
                 :class="selectedStorageCategory === 'trash' ? 'bg-[#ff453a]/15 text-[#ff453a] font-medium' : 'text-[#8e8e93] hover:text-white hover:bg-white/[0.04]'" 
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all text-left group">
                 <div class="flex items-center gap-3">
                   <i class="fa-regular fa-trash-can text-sm w-4 text-center transition-colors" :class="selectedStorageCategory === 'trash' ? 'text-[#ff453a]' : 'text-[#8e8e93] group-hover:text-white'"></i>
                   <span>Trash</span>
                 </div>
+                <span v-if="trashItems.length > 0" class="text-[11px] font-mono tabular-nums text-[#ff453a] font-semibold">{{ trashItems.length }}</span>
               </button>
             </div>
 
@@ -967,12 +991,30 @@
 
                   <!-- Standard Controls when no selection -->
                   <template v-else>
-                    <!-- Location Badge -->
-                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white font-medium">
-                      <i class="fa-solid fa-house text-xs text-[#72b6fc]"></i>
-                      <span>{{ currentCategoryTitle }}</span>
-                      <span class="text-[11px] text-[#8e8e93] font-mono">({{ filteredFiles.length }})</span>
+                    <!-- Location Badge & Breadcrumbs -->
+                    <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#202124] border border-white/10 text-xs text-white font-medium max-w-[280px] overflow-hidden">
+                      <button @click="navigateToFolder('')" class="hover:text-[#72b6fc] flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-house text-xs text-[#72b6fc]"></i>
+                        <span>{{ currentCategoryTitle }}</span>
+                      </button>
+                      <template v-for="crumb in folderBreadcrumbs" :key="crumb.path">
+                        <span class="text-[#8e8e93] text-[10px]">/</span>
+                        <button @click="navigateToFolder(crumb.path)" class="hover:text-[#72b6fc] truncate max-w-[90px] transition-colors">
+                          {{ crumb.name }}
+                        </button>
+                      </template>
+                      <span class="text-[11px] text-[#8e8e93] font-mono ml-1">({{ filteredFiles.length }})</span>
                     </div>
+
+                    <!-- Up / Back Button when inside subfolder -->
+                    <button 
+                      v-if="currentFolder" 
+                      @click="navigateUpFolder" 
+                      class="px-2.5 py-1.5 rounded-full bg-[#202124] hover:bg-white/10 border border-white/10 text-xs text-[#8e8e93] hover:text-white transition-all flex items-center gap-1.5" 
+                      title="Back to parent folder">
+                      <i class="fa-solid fa-arrow-up text-[10px]"></i>
+                      <span class="text-[11px]">Up</span>
+                    </button>
 
                     <!-- View Toggle (Grid / List) -->
                     <div class="flex items-center bg-[#202124] p-0.5 rounded-full border border-white/10 text-xs">
@@ -1027,10 +1069,74 @@
                   <p>No files shared with your account yet.</p>
                 </div>
 
-                <!-- Trash View -->
-                <div v-else-if="selectedStorageCategory === 'trash'" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
-                  <i class="fa-regular fa-trash-can text-2xl text-[#ff453a] opacity-60"></i>
-                  <p>Trash is empty. Deleted files are removed permanently.</p>
+                <!-- Real Trash & Recovery View -->
+                <div v-else-if="selectedStorageCategory === 'trash'" class="space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                    <div class="flex items-center gap-2 text-xs text-[#8e8e93]">
+                      <i class="fa-solid fa-trash-can text-[#ff453a]"></i>
+                      <span>Items in Trash are preserved until permanently deleted.</span>
+                    </div>
+                    <button 
+                      v-if="trashItems.length > 0"
+                      @click="emptyTrash" 
+                      class="px-3 py-1.5 rounded-xl bg-[#ff453a]/15 hover:bg-[#ff453a]/25 text-[#ff453a] text-xs font-medium transition-all flex items-center gap-1.5">
+                      <i class="fa-solid fa-trash-can"></i>
+                      <span>Empty Trash</span>
+                    </button>
+                  </div>
+
+                  <!-- Empty Trash State -->
+                  <div v-if="trashItems.length === 0" class="text-center py-16 text-[#8e8e93] text-xs space-y-2">
+                    <div class="w-12 h-12 rounded-full bg-white/[0.04] flex items-center justify-center mx-auto text-xl text-[#8e8e93]">
+                      <i class="fa-regular fa-trash-can"></i>
+                    </div>
+                    <p class="font-medium text-white">Trash is empty</p>
+                    <p class="text-[11px]">Deleted files will appear here and can be restored anytime.</p>
+                  </div>
+
+                  <!-- Trash Items Table -->
+                  <div v-else class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                      <thead>
+                        <tr class="text-[#8e8e93] border-b border-white/[0.06]">
+                          <th class="pb-2.5 font-medium">Deleted Item</th>
+                          <th class="pb-2.5 font-medium">Original Size</th>
+                          <th class="pb-2.5 font-medium hidden sm:table-cell">Deleted Date</th>
+                          <th class="pb-2.5 font-medium text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-white/[0.04]">
+                        <tr v-for="item in trashItems" :key="item.id" class="hover:bg-white/[0.03] transition-colors">
+                          <td class="py-3 pr-2 flex items-center gap-2.5 text-white font-medium">
+                            <i :class="getFileIcon(item.original_name)"></i>
+                            <span class="truncate max-w-[220px] sm:max-w-md">{{ item.original_name }}</span>
+                          </td>
+                          <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
+                            {{ formatBytes(item.size) }}
+                          </td>
+                          <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
+                            {{ formatDate(item.deleted_at) }}
+                          </td>
+                          <td class="py-3 text-right space-x-2 whitespace-nowrap">
+                            <button 
+                              @click="restoreTrashItem(item)" 
+                              class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#30d158]/15 hover:bg-[#30d158]/25 text-[#30d158] font-medium transition-all" 
+                              title="Restore file to drive">
+                              <i class="fa-solid fa-rotate-left text-xs"></i>
+                              <span>Restore</span>
+                            </button>
+                            <button 
+                              @click="deleteTrashPermanently(item)" 
+                              class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#ff453a]/15 hover:bg-[#ff453a]/25 text-[#ff453a] font-medium transition-all" 
+                              title="Delete permanently">
+                              <i class="fa-solid fa-xmark text-xs"></i>
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <!-- Regular File Categories: all, photos, videos, music, documents, shared_by_me -->
@@ -1057,41 +1163,53 @@
                         <tr 
                           v-for="f in filteredFiles" 
                           :key="f.name" 
-                          @click="toggleSelectFile(f)"
-                          @dblclick="openPreview(f)"
+                          @click="f.is_dir ? enterFolder(f) : toggleSelectFile(f)"
+                          @dblclick="f.is_dir ? enterFolder(f) : openPreview(f)"
                           :class="isSelected(f) ? 'bg-[#243345]/50' : 'hover:bg-white/[0.03]'" 
                           class="transition-colors group cursor-pointer">
                           <td class="py-3 pl-1 pr-2">
                             <div 
+                              v-if="!f.is_dir"
                               @click.stop="toggleSelectFile(f)"
                               :class="isSelected(f) ? 'bg-[#72b6fc] text-[#121316]' : 'border border-white/30 group-hover:border-white/60 text-transparent'"
                               class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all">
                               <i class="fa-solid fa-check"></i>
                             </div>
+                            <div v-else class="w-4 h-4 flex items-center justify-center text-[#ff9f0a]">
+                              <i class="fa-solid fa-folder text-xs"></i>
+                            </div>
                           </td>
                           <td class="py-3 pr-2 flex items-center gap-2.5 truncate max-w-[200px] sm:max-w-none">
-                            <i :class="getFileIcon(f.name)"></i>
+                            <i v-if="f.is_dir" class="fa-solid fa-folder text-[#ff9f0a] text-sm"></i>
+                            <i v-else :class="getFileIcon(f.name)"></i>
                             <span class="text-white font-medium truncate group-hover:text-[#72b6fc] transition-colors" :title="decodeURIComponent(f.name)">
                               {{ decodeURIComponent(f.name) }}
                             </span>
+                            <span v-if="f.is_dir" class="text-[10px] text-[#ff9f0a] bg-[#ff9f0a]/10 px-1.5 py-0.5 rounded font-mono">DIR</span>
                           </td>
                           <td class="py-3 text-[#8e8e93] font-mono tabular-nums whitespace-nowrap">
-                            {{ formatBytes(f.size) }}
+                            {{ f.is_dir ? '—' : formatBytes(f.size) }}
                           </td>
                           <td class="py-3 text-[#636366] font-mono hidden sm:table-cell whitespace-nowrap">
                             {{ formatDate(f.modTime) }}
                           </td>
                           <td class="py-3 text-right space-x-1.5 whitespace-nowrap" @click.stop>
-                            <button @click="openPreview(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#72b6fc]/20 text-[#8e8e93] hover:text-[#72b6fc] transition-all" title="Preview">
+                            <button v-if="!f.is_dir" @click="openPreview(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#72b6fc]/20 text-[#8e8e93] hover:text-[#72b6fc] transition-all" title="Preview">
                               <i class="fa-solid fa-eye text-[11px]"></i>
                             </button>
-                            <button @click="openShareModal(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff9f0a]/20 text-[#8e8e93] hover:text-[#ff9f0a] transition-all" title="Share Publicly">
+                            <button v-if="!f.is_dir" @click="openShareModal(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff9f0a]/20 text-[#8e8e93] hover:text-[#ff9f0a] transition-all" title="Share Publicly">
                               <i class="fa-solid fa-share-nodes text-[11px]"></i>
                             </button>
-                            <a :href="getDownloadUrl(f.name)" target="_blank" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all" title="Download">
+                            <a v-if="!f.is_dir" :href="getDownloadUrl(f.path || f.name)" target="_blank" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-white/10 text-[#8e8e93] hover:text-white transition-all" title="Download">
                               <i class="fa-solid fa-download text-[11px]"></i>
                             </a>
-                            <button @click="deleteFile(f.name)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all" title="Delete">
+                            <button @click="renameItem(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#72b6fc]/20 text-[#8e8e93] hover:text-[#72b6fc] transition-all" title="Rename">
+                              <i class="fa-solid fa-pen text-[10px]"></i>
+                            </button>
+                            <button @click="moveItem(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff9f0a]/20 text-[#8e8e93] hover:text-[#ff9f0a] transition-all" title="Move to folder">
+                              <i class="fa-solid fa-folder-tree text-[10px]"></i>
+                            </button>
+                            <button @click="deleteFile(f)" class="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-white/[0.05] hover:bg-[#ff453a]/20 text-[#8e8e93] hover:text-[#ff453a] transition-all" title="Move to Trash">
                               <i class="fa-solid fa-trash-can text-[11px]"></i>
                             </button>
                           </td>
@@ -1105,30 +1223,42 @@
                     <div 
                       v-for="f in filteredFiles" 
                       :key="f.name"
-                      @click="toggleSelectFile(f)"
-                      @dblclick="openPreview(f)"
+                      @click="f.is_dir ? enterFolder(f) : toggleSelectFile(f)"
+                      @dblclick="f.is_dir ? enterFolder(f) : openPreview(f)"
                       :class="isSelected(f) ? 'bg-[#243345] border-[#72b6fc] shadow-[0_4px_20px_rgba(114,182,252,0.18)] ring-1 ring-[#72b6fc]' : 'bg-[#1a1b20] border-white/[0.08] hover:bg-[#202229] hover:border-white/20'"
                       class="rounded-2xl p-3.5 border transition-all cursor-pointer select-none flex flex-col justify-between group relative min-h-[260px]">
                       
                       <!-- Card Header: Checkbox Badge + Truncated Title -->
                       <div class="flex items-center gap-2 mb-2">
                         <div 
+                          v-if="!f.is_dir"
                           @click.stop="toggleSelectFile(f)"
                           :class="isSelected(f) ? 'bg-[#72b6fc] text-[#121316]' : 'border border-white/30 group-hover:border-white/60 text-transparent opacity-0 group-hover:opacity-100'"
                           class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shadow-sm flex-shrink-0">
                           <i class="fa-solid fa-check"></i>
                         </div>
+                        <div v-else class="w-5 h-5 flex items-center justify-center text-[#ff9f0a] flex-shrink-0">
+                          <i class="fa-solid fa-folder text-xs"></i>
+                        </div>
                         <span class="text-xs font-semibold text-white tracking-wide truncate flex-1 uppercase" :title="decodeURIComponent(f.name)">
                           {{ decodeURIComponent(f.name) }}
                         </span>
+                        <span v-if="f.is_dir" class="text-[9px] text-[#ff9f0a] bg-[#ff9f0a]/15 px-1.5 py-0.5 rounded font-mono">DIR</span>
                       </div>
 
                       <!-- Inset Preview Thumbnail Container -->
                       <div class="w-full my-2 rounded-xl overflow-hidden aspect-[4/3] relative flex items-center justify-center transition-transform group-hover:scale-[1.01] bg-[#121316] border border-white/[0.04]">
                         
+                        <!-- Directory Card Thumbnail -->
+                        <div v-if="f.is_dir" class="w-full h-full bg-[#201c14] border border-[#ff9f0a]/30 text-[#ff9f0a] p-4 rounded-xl flex flex-col items-center justify-center text-center space-y-1">
+                          <i class="fa-solid fa-folder text-4xl text-[#ff9f0a]"></i>
+                          <span class="text-xs text-white font-medium">Directory</span>
+                          <span class="text-[9px] text-[#8e8e93]">Click to enter</span>
+                        </div>
+
                         <!-- Image thumbnail -->
                         <img 
-                          v-if="isImageFile(f.name)" 
+                          v-else-if="isImageFile(f.name)" 
                           :src="getPreviewUrl(f.name)" 
                           class="w-full h-full object-cover rounded-xl"
                           loading="lazy">
@@ -1212,10 +1342,23 @@
 
                       </div>
 
-                      <!-- Card Footer: Size & ModTime -->
+                      <!-- Card Footer: Size, ModTime & Quick Actions -->
                       <div class="flex items-center justify-between text-[11px] font-mono text-[#8e8e93] pt-1.5 border-t border-white/[0.04]">
-                        <span>{{ formatBytes(f.size) }}</span>
-                        <span>{{ formatDate(f.modTime) }}</span>
+                        <span>{{ f.is_dir ? 'Folder' : formatBytes(f.size) }}</span>
+                        <div class="flex items-center gap-2" @click.stop>
+                          <button @click="renameItem(f)" class="hover:text-[#72b6fc] transition-colors p-0.5" title="Rename">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                          </button>
+                          <button @click="moveItem(f)" class="hover:text-[#ff9f0a] transition-colors p-0.5" title="Move to folder">
+                            <i class="fa-solid fa-folder-tree text-[10px]"></i>
+                          </button>
+                          <button v-if="!f.is_dir" @click="openShareModal(f)" class="hover:text-[#ff9f0a] transition-colors p-0.5" title="Share Publicly">
+                            <i class="fa-solid fa-share-nodes text-[10px]"></i>
+                          </button>
+                          <button @click="deleteFile(f)" class="hover:text-[#ff453a] transition-colors p-0.5" title="Move to Trash">
+                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                          </button>
+                        </div>
                       </div>
 
                     </div>
@@ -1971,8 +2114,9 @@
             </p>
           </div>
 
+          <!-- Share URL -->
           <div>
-            <label class="text-[#8e8e93] block mb-1">Shareable Public URL (Anyone with this link can view & download)</label>
+            <label class="text-[#8e8e93] block mb-1">Shareable Public URL</label>
             <div class="flex items-center gap-2">
               <input 
                 :value="shareModalData.share_url" 
@@ -1987,12 +2131,47 @@
             </div>
           </div>
 
-          <div class="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1 text-[11px] text-[#8e8e93]">
-            <p class="flex items-center gap-1.5 text-white font-medium">
-              <i class="fa-solid fa-shield-halved text-[#30d158]"></i>
-              Protected Direct Stream
-            </p>
-            <p>Your server credentials are kept safe. Cloudflare Edge securely proxies the content directly from your VPS.</p>
+          <!-- Security Settings: Password & Expiry -->
+          <div class="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-3">
+            <div class="flex items-center justify-between text-[11px] text-white font-medium">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-[#ff9f0a]"></i> Access Security & Expiry</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[10px] text-[#8e8e93] block mb-1">Password (Optional)</label>
+                <input 
+                  type="text" 
+                  v-model="sharePassword" 
+                  placeholder="e.g. 123456" 
+                  class="w-full bg-[#141416] border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-[#0a84ff]">
+              </div>
+              <div>
+                <label class="text-[10px] text-[#8e8e93] block mb-1">Expiration</label>
+                <select 
+                  v-model.number="shareExpiresInHours" 
+                  class="w-full bg-[#141416] border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs outline-none focus:border-[#0a84ff] cursor-pointer">
+                  <option :value="0">Never expires</option>
+                  <option :value="1">1 Hour</option>
+                  <option :value="24">24 Hours (1 Day)</option>
+                  <option :value="168">7 Days</option>
+                  <option :value="720">30 Days</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span v-if="shareModalData.has_password" class="text-[10px] text-[#30d158] flex items-center gap-1">
+                <i class="fa-solid fa-check"></i> Password active
+              </span>
+              <span v-else class="text-[10px] text-[#8e8e93]">No password set</span>
+
+              <button 
+                @click="generateShareLink()" 
+                class="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white text-[11px] font-medium transition-all">
+                Update Link Settings
+              </button>
+            </div>
           </div>
 
           <div class="pt-3 border-t border-white/10 flex justify-between items-center text-xs">
@@ -2060,132 +2239,6 @@
         </form>
       </div>
     </div>
-
-    <!-- ================================================================= -->
-    <!-- STANDALONE PUBLIC SHARE VIEW (DROPBOX/GDRIVE STYLE)               -->
-    <!-- ================================================================= -->
-    <div v-if="isPublicShareView" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-[#0a0a0c] overflow-y-auto">
-      <!-- Background Ambient Glow -->
-      <div class="absolute inset-0 bg-radial-vignette opacity-80 pointer-events-none"></div>
-      <div class="w-96 h-96 rounded-full bg-[#0a84ff]/10 blur-3xl absolute top-10 pointer-events-none"></div>
-
-      <div class="relative z-10 max-w-2xl w-full space-y-6">
-        <!-- Brand Header -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-[#0a84ff]/20 border border-[#0a84ff]/30 flex items-center justify-center text-[#0a84ff]">
-              <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
-            </div>
-            <div>
-              <h1 class="text-sm font-bold text-white uppercase tracking-wider">VPS HUB Storage</h1>
-              <p class="text-[10px] text-[#8e8e93]">Secure Direct Transfer</p>
-            </div>
-          </div>
-          <a href="/" class="text-xs text-[#8e8e93] hover:text-white transition-colors flex items-center gap-1">
-            <span>Dashboard</span>
-            <i class="fa-solid fa-arrow-right text-[10px]"></i>
-          </a>
-        </div>
-
-        <!-- Share Card -->
-        <div class="apple-glass-card p-6 sm:p-8 space-y-6 border border-white/15 shadow-2xl">
-          <!-- Loading State -->
-          <div v-if="publicShareLoading" class="py-16 text-center space-y-3">
-            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[#0a84ff]"></i>
-            <p class="text-xs text-[#8e8e93]">Retrieving file from server node...</p>
-          </div>
-
-          <!-- Error State -->
-          <div v-else-if="publicShareError" class="py-12 text-center space-y-3">
-            <div class="w-12 h-12 rounded-full bg-[#ff453a]/15 text-[#ff453a] flex items-center justify-center mx-auto text-xl">
-              <i class="fa-solid fa-link-slash"></i>
-            </div>
-            <h3 class="text-sm font-semibold text-white">Share Link Unavailable</h3>
-            <p class="text-xs text-[#8e8e93] max-w-sm mx-auto">{{ publicShareError }}</p>
-            <a href="/" class="inline-block mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-all">
-              Go to Homepage
-            </a>
-          </div>
-
-          <!-- Active File Content -->
-          <div v-else-if="publicShareData" class="space-y-6">
-            <!-- File Info Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
-              <div class="flex items-center gap-3 truncate">
-                <div class="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
-                  <i :class="getFileIcon(publicShareData.file_name)"></i>
-                </div>
-                <div class="truncate">
-                  <h2 class="text-base font-semibold text-white truncate" :title="publicShareData.file_name">
-                    {{ publicShareData.file_name }}
-                  </h2>
-                  <p class="text-xs text-[#8e8e93] font-mono mt-0.5">
-                    {{ formatBytes(publicShareData.file_size) }} · Node: {{ publicShareData.vps_name }}
-                  </p>
-                </div>
-              </div>
-
-              <!-- Direct Download CTA -->
-              <a 
-                :href="'/api/files/share/raw?id=' + publicShareData.id + '&download=1'"
-                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a84ff] hover:bg-[#0071e3] active:scale-[0.98] text-white text-xs font-semibold shadow-apple-cta transition-all flex-shrink-0">
-                <i class="fa-solid fa-download"></i>
-                <span>Download File</span>
-              </a>
-            </div>
-
-            <!-- Interactive Inline Preview for Public Visitor -->
-            <div class="rounded-xl overflow-hidden bg-black/40 border border-white/10 min-h-[160px] flex items-center justify-center">
-              <!-- Image Preview -->
-              <img 
-                v-if="isImageFile(publicShareData.file_name)"
-                :src="'/api/files/share/raw?id=' + publicShareData.id"
-                class="max-h-[60vh] max-w-full rounded-xl object-contain mx-auto shadow-lg"
-                alt="Image Preview">
-
-              <!-- Video Player -->
-              <video 
-                v-else-if="isVideoFile(publicShareData.file_name)"
-                controls autoplay
-                :src="'/api/files/share/raw?id=' + publicShareData.id"
-                class="max-h-[60vh] w-full rounded-xl bg-black shadow-lg">
-              </video>
-
-              <!-- Audio Player -->
-              <div v-else-if="isAudioFile(publicShareData.file_name)" class="w-full p-8 text-center space-y-3">
-                <i class="fa-solid fa-headphones text-4xl text-[#0a84ff]"></i>
-                <audio controls autoplay :src="'/api/files/share/raw?id=' + publicShareData.id" class="w-full mt-2"></audio>
-              </div>
-
-              <!-- PDF Reader -->
-              <iframe 
-                v-else-if="isPdfFile(publicShareData.file_name)"
-                :src="'/api/files/share/raw?id=' + publicShareData.id"
-                class="w-full h-[60vh] rounded-xl bg-white border-0">
-              </iframe>
-
-              <!-- Code / Text Reader -->
-              <div v-else-if="isTextFile(publicShareData.file_name)" class="w-full p-4 font-mono text-xs text-left max-h-[55vh] overflow-auto">
-                <pre class="whitespace-pre-wrap text-[#f5f5f7]"><code>{{ publicShareTextContent }}</code></pre>
-              </div>
-
-              <!-- Generic Info -->
-              <div v-else class="p-8 text-center space-y-2">
-                <i class="fa-solid fa-file-arrow-down text-4xl text-[#8e8e93]"></i>
-                <p class="text-xs text-[#8e8e93]">No inline preview available for this file extension.</p>
-              </div>
-            </div>
-
-            <!-- Public Meta Footer -->
-            <div class="flex items-center justify-between text-[11px] text-[#636366] pt-2">
-              <span>Shared from VPS Hub</span>
-              <span>Direct encrypted stream</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
 
     <!-- ================================================================= -->
     <!-- MODAL: ADD EXPENSE (APPLE SHEET MODAL)                            -->
@@ -3029,6 +3082,104 @@
           clearSelection();
         }
 
+        // Subdirectory & Folder Tree state
+        const currentFolder = ref(''); // relative folder path, e.g. "" or "docs"
+        const folderBreadcrumbs = computed(() => {
+          if (!currentFolder.value) return [];
+          const parts = currentFolder.value.split('/').filter(Boolean);
+          const crumbs = [];
+          let accum = '';
+          for (const p of parts) {
+            accum = accum ? `${accum}/${p}` : p;
+            crumbs.push({ name: p, path: accum });
+          }
+          return crumbs;
+        });
+
+        function navigateToFolder(path) {
+          currentFolder.value = path || '';
+          loadFilesForSelectedServer();
+        }
+
+        function navigateUpFolder() {
+          if (!currentFolder.value) return;
+          const parts = currentFolder.value.split('/').filter(Boolean);
+          parts.pop();
+          currentFolder.value = parts.join('/');
+          loadFilesForSelectedServer();
+        }
+
+        function enterFolder(f) {
+          if (!f || !f.is_dir) return;
+          const next = f.path || (currentFolder.value ? `${currentFolder.value}/${f.name}` : f.name);
+          navigateToFolder(next);
+        }
+
+        // Real Trash & Restoration State
+        const trashItems = ref([]);
+        const trashLoading = ref(false);
+
+        async function fetchTrashList() {
+          trashLoading.value = true;
+          try {
+            const res = await fetch('/api/files/trash/list?vps_id=vps2');
+            if (res.ok) {
+              const data = await res.json();
+              trashItems.value = data.items || [];
+            }
+          } catch (e) {
+            trashItems.value = [];
+          } finally {
+            trashLoading.value = false;
+          }
+        }
+
+        async function restoreTrashItem(item) {
+          try {
+            const res = await fetch(`/api/files/trash/restore?vps_id=vps2&id=${encodeURIComponent(item.id)}`, { method: 'POST' });
+            if (res.ok) {
+              await fetchTrashList();
+              await loadFilesForSelectedServer();
+              alert(`Restored "${item.original_name}" to My Files.`);
+            }
+          } catch (e) {
+            alert('Error restoring item: ' + e.message);
+          }
+        }
+
+        async function deleteTrashPermanently(item) {
+          if (!confirm(`Permanently delete "${item.original_name}"? This cannot be undone.`)) return;
+          try {
+            const res = await fetch(`/api/files/trash/delete?vps_id=vps2&id=${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+            if (res.ok) {
+              await fetchTrashList();
+            }
+          } catch (e) {
+            alert('Error: ' + e.message);
+          }
+        }
+
+        async function emptyTrash() {
+          if (!confirm('Permanently delete all items in Trash? This cannot be undone.')) return;
+          try {
+            const res = await fetch('/api/files/trash/empty?vps_id=vps2', { method: 'DELETE' });
+            if (res.ok) {
+              await fetchTrashList();
+            }
+          } catch (e) {
+            alert('Error emptying trash: ' + e.message);
+          }
+        }
+
+        function selectStorageCategory(cat) {
+          selectedStorageCategory.value = cat;
+          if (cat === 'trash') {
+            fetchTrashList();
+          } else {
+            loadFilesForSelectedServer();
+          }
+        }
+
         const currentCategoryTitle = computed(() => {
           const map = {
             all: 'My Files',
@@ -3037,19 +3188,15 @@
             music: 'Music',
             documents: 'Documents',
             shared_with_me: 'Shared with me',
-            trash: 'Trash',
-            shared_by_me: 'Shared by me',
-            connect: 'Connect & Mount',
-            tasks: 'Background Tasks',
-            remote_dl: 'Remote Download'
+            trash: 'Trash'
           };
           return map[selectedStorageCategory.value] || 'Files Explorer';
         });
 
         const categoryCounts = computed(() => {
-          const all = files.value || [];
+          const all = (files.value || []).filter(f => !f.is_dir);
           return {
-            all: all.length,
+            all: (files.value || []).length,
             photos: all.filter(f => isImageFile(f.name)).length,
             videos: all.filter(f => isVideoFile(f.name)).length,
             music: all.filter(f => isAudioFile(f.name)).length,
@@ -3106,9 +3253,17 @@
           }
         }
 
-        async function loadFilesForSelectedServer() {
+        async function loadFilesForSelectedServer(folderPath) {
+          if (folderPath !== undefined) {
+            currentFolder.value = folderPath;
+          }
+          if (selectedStorageCategory.value === 'trash') {
+            await fetchTrashList();
+            return;
+          }
           try {
-            const res = await fetch('/api/files/list?vps_id=vps2');
+            const pathQuery = currentFolder.value ? `&path=${encodeURIComponent(currentFolder.value)}` : '';
+            const res = await fetch(`/api/files/list?vps_id=vps2${pathQuery}`);
             if (res.ok) {
               const data = await res.json();
               files.value = (data.files || []).map(f => {
@@ -3149,7 +3304,8 @@
             uploadStatus.value.message = `Uploading chunk ${i + 1}/${totalChunks}...`;
 
             try {
-              const res = await fetch(`/api/files/upload-chunk?vps_id=${encodeURIComponent(upVid)}`, {
+              const dirParam = currentFolder.value ? `&dir=${encodeURIComponent(currentFolder.value)}` : '';
+              const res = await fetch(`/api/files/upload-chunk?vps_id=${encodeURIComponent(upVid)}${dirParam}`, {
                 method: 'POST',
                 headers: {
                   'Upload-Id': uploadId,
@@ -3259,23 +3415,78 @@
           showNewMenu.value = false;
           const name = prompt('Enter new folder name:');
           if (!name || !name.trim()) return;
-          const file = new File([''], `${name.trim()}/.keep`, { type: 'text/plain' });
-          await uploadSingleFile(file);
+          try {
+            const pathParam = currentFolder.value ? `&path=${encodeURIComponent(currentFolder.value)}` : '';
+            const res = await fetch(`/api/files/create-folder?vps_id=vps2&name=${encodeURIComponent(name.trim())}${pathParam}`, {
+              method: 'POST'
+            });
+            if (res.ok) {
+              await loadFilesForSelectedServer();
+            } else {
+              const err = await res.json();
+              alert('Failed to create folder: ' + (err.error || 'Unknown error'));
+            }
+          } catch (e) {
+            alert('Create folder error: ' + e.message);
+          }
+        }
+
+        async function renameItem(f) {
+          if (!f) return;
+          const cleanName = decodeURIComponent(f.name);
+          const newName = prompt(`Rename "${cleanName}" to:`, cleanName);
+          if (!newName || !newName.trim() || newName.trim() === cleanName) return;
+
+          const targetRel = f.path || (currentFolder.value ? `${currentFolder.value}/${f.name}` : f.name);
+          try {
+            const res = await fetch(`/api/files/rename?vps_id=vps2&path=${encodeURIComponent(targetRel)}&new_name=${encodeURIComponent(newName.trim())}`, {
+              method: 'POST'
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              await loadFilesForSelectedServer();
+            } else {
+              alert('Rename failed: ' + (data.error || 'Server error'));
+            }
+          } catch (err) {
+            alert('Rename error: ' + err.message);
+          }
+        }
+
+        async function moveItem(f) {
+          if (!f) return;
+          const cleanName = decodeURIComponent(f.name);
+          const targetDir = prompt(`Move "${cleanName}" to folder path (leave empty for root):`, '');
+          if (targetDir === null) return;
+
+          const srcRel = f.path || (currentFolder.value ? `${currentFolder.value}/${f.name}` : f.name);
+          try {
+            const res = await fetch(`/api/files/move?vps_id=vps2&source=${encodeURIComponent(srcRel)}&target_dir=${encodeURIComponent(targetDir.trim())}`, {
+              method: 'POST'
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              await loadFilesForSelectedServer();
+            } else {
+              alert('Move failed: ' + (data.error || 'Server error'));
+            }
+          } catch (err) {
+            alert('Move error: ' + err.message);
+          }
         }
 
         // Private download always goes through same-origin Cloudflare proxy
-        // so token never leaks in cross-origin URL and tunnel 403/challenge is bypassed.
         function getDownloadUrl(fileName) {
           const srv = currentStorageServer.value;
-          const vid = srv ? (srv.id || srv.vps_id || '') : '';
+          const vid = srv ? (srv.id || srv.vps_id || '') : 'vps2';
           if (!fileName) return '#';
-          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&name=${encodeURIComponent(fileName)}&download=1`;
+          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&path=${encodeURIComponent(fileName)}&download=1`;
         }
         function getPreviewUrl(fileName) {
           const srv = currentStorageServer.value;
-          const vid = srv ? (srv.id || srv.vps_id || '') : '';
+          const vid = srv ? (srv.id || srv.vps_id || '') : 'vps2';
           if (!fileName) return '';
-          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&name=${encodeURIComponent(fileName)}`;
+          return `/api/files/download?vps_id=${encodeURIComponent(vid)}&path=${encodeURIComponent(fileName)}`;
         }
 
         function copyShareLink(fileName) {
@@ -3284,16 +3495,20 @@
           alert('Copied link: ' + url);
         }
 
-        async function deleteFile(fileName) {
-          if (!confirm(`Are you sure you want to delete ${fileName} from ${currentStorageServer.value.name}?`)) return;
-          files.value = files.value.filter(f => f.name !== fileName);
-          const srv = currentStorageServer.value;
-          const delVid = (srv && (srv.id || srv.vps_id)) || '';
+        async function deleteFile(f) {
+          const targetPath = typeof f === 'string' ? f : (f.path || f.name);
+          const displayName = decodeURIComponent(typeof f === 'string' ? f : f.name);
+          if (!confirm(`Move "${displayName}" to Trash?`)) return;
           try {
-            await fetch(`/api/files/delete?vps_id=${encodeURIComponent(delVid)}&name=${encodeURIComponent(fileName)}`, {
+            const res = await fetch(`/api/files/delete?vps_id=vps2&path=${encodeURIComponent(targetPath)}`, {
               method: 'DELETE'
             });
-          } catch (e) {}
+            if (res.ok) {
+              await loadFilesForSelectedServer();
+            }
+          } catch (e) {
+            alert('Failed to delete file: ' + e.message);
+          }
         }
 
         function isImageFile(name) {
@@ -3580,13 +3795,25 @@
         const shareModalLoading = ref(false);
         const shareModalData = ref(null);
         const shareCopied = ref(false);
+        const sharePassword = ref('');
+        const shareExpiresInHours = ref(0);
 
         async function openShareModal(f) {
           if (!f) return;
+          previewFile.value = f;
           showShareModal.value = true;
-          shareModalLoading.value = true;
+          shareModalLoading.value = false;
           shareModalData.value = null;
           shareCopied.value = false;
+          sharePassword.value = '';
+          shareExpiresInHours.value = 0;
+          await generateShareLink(f);
+        }
+
+        async function generateShareLink(f) {
+          const target = f || previewFile.value;
+          if (!target) return;
+          shareModalLoading.value = true;
 
           try {
             const res = await fetch('/api/files/share', {
@@ -3595,9 +3822,11 @@
               body: JSON.stringify({
                 vps_id: 'vps2',
                 vps_name: 'Ubuntu',
-                file_name: f.name,
-                file_size: f.size,
-                tunnel_url: 'https://vps2.hoangngocbach.id.vn'
+                file_name: target.path || target.name,
+                file_size: target.size || 0,
+                tunnel_url: 'https://vps2.hoangngocbach.id.vn',
+                password: sharePassword.value ? sharePassword.value.trim() : '',
+                expires_in_hours: shareExpiresInHours.value
               })
             });
             if (res.ok) {
@@ -3607,7 +3836,7 @@
               showShareModal.value = false;
             }
           } catch (e) {
-            alert('Error connecting to serverless function: ' + e.message);
+            alert('Error connecting to share API: ' + e.message);
             showShareModal.value = false;
           } finally {
             shareModalLoading.value = false;
@@ -3639,6 +3868,33 @@
         const publicShareError = ref('');
         const publicShareData = ref(null);
         const publicShareTextContent = ref('');
+        const clientSharePassword = ref('');
+        const publicShareUnlocked = ref(false);
+        const publicSharePasswordError = ref('');
+
+        async function unlockPublicShare() {
+          if (!clientSharePassword.value) {
+            publicSharePasswordError.value = 'Please enter password';
+            return;
+          }
+          publicSharePasswordError.value = '';
+          try {
+            const rawUrl = `/api/files/share/raw?id=${encodeURIComponent(publicShareData.value.id)}&pwd=${encodeURIComponent(clientSharePassword.value)}`;
+            const res = await fetch(rawUrl);
+            if (res.status === 401) {
+              publicSharePasswordError.value = 'Incorrect password. Please try again.';
+            } else if (res.ok) {
+              publicShareUnlocked.value = true;
+              if (isTextFile(publicShareData.value.file_name)) {
+                publicShareTextContent.value = (await res.text()).slice(0, 80000);
+              }
+            } else {
+              publicSharePasswordError.value = 'Failed to verify password';
+            }
+          } catch (e) {
+            publicSharePasswordError.value = e.message;
+          }
+        }
 
         async function checkPublicShareRoute() {
           const urlParams = new URLSearchParams(window.location.search);
@@ -3658,7 +3914,7 @@
             const data = await res.json();
             publicShareData.value = data;
 
-            if (isTextFile(data.file_name)) {
+            if (!data.has_password && isTextFile(data.file_name)) {
               try {
                 const textRes = await fetch(`/api/files/share/raw?id=${data.id}`);
                 if (textRes.ok) {
@@ -3905,6 +4161,7 @@
           storageDisk,
           files,
           selectedStorageCategory,
+          selectStorageCategory,
           storageSearchQuery,
           storageViewMode,
           showNewMenu,
@@ -3915,6 +4172,19 @@
           openRemoteDownloadDialog,
           createNewFolder,
           createNewFile,
+          renameItem,
+          moveItem,
+          currentFolder,
+          folderBreadcrumbs,
+          navigateToFolder,
+          navigateUpFolder,
+          enterFolder,
+          trashItems,
+          trashLoading,
+          fetchTrashList,
+          restoreTrashItem,
+          deleteTrashPermanently,
+          emptyTrash,
           remoteDownloadUrl,
           isRemoteDownloading,
           remoteDownloadMsg,
@@ -3986,6 +4256,9 @@
           shareModalLoading,
           shareModalData,
           shareCopied,
+          sharePassword,
+          shareExpiresInHours,
+          generateShareLink,
           openShareModal,
           copyShareLinkToClipboard,
           revokeCurrentShare,
@@ -3994,6 +4267,10 @@
           publicShareError,
           publicShareData,
           publicShareTextContent,
+          clientSharePassword,
+          publicShareUnlocked,
+          publicSharePasswordError,
+          unlockPublicShare,
           // Authentication
           isAuthenticated,
           currentUsername,
