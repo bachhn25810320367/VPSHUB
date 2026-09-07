@@ -231,6 +231,10 @@ function isPublicRoute(path, method) {
   if (path === "/api/files/share/raw") return true; // password gate lives inside handler
   if (path === "/api/files/share" && method === "GET") return true; // metadata by id; list-all guarded below
   if (path === "/api/telemetry" && method === "POST") return true; // Go agent uses X-Agent-Secret
+  if (path === "/api/telemetry/latest" && method === "GET") return true;
+  if (path === "/api/telemetry/history" && method === "GET") return true;
+  if (path === "/api/servers" && method === "GET") return true;
+  if (path === "/api/expenses" && method === "GET") return true;
   return false;
 }
 

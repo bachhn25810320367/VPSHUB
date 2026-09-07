@@ -2800,11 +2800,7 @@
               }
             }
           } catch (e) {
-            servers.value.forEach(s => {
-              s.cpu_percent = Math.max(0.5, Math.min(99, +(s.cpu_percent + (Math.random() * 0.8 - 0.4)).toFixed(2)));
-              s.network.speed_rx_bps = Math.max(50000, Math.round(s.network.speed_rx_bps * (1 + (Math.random() * 0.2 - 0.1))));
-              s.network.speed_tx_bps = Math.max(20000, Math.round(s.network.speed_tx_bps * (1 + (Math.random() * 0.2 - 0.1))));
-            });
+            console.warn('Telemetry fetch failed, keeping last real data:', e);
           } finally {
             if (timeRange.value === 'Live') {
               const nowSec = new Date().toLocaleTimeString('vi-VN', { minute: '2-digit', second: '2-digit' });
