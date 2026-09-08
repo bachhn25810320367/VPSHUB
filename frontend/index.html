@@ -1142,6 +1142,10 @@
 
                 <!-- Regular File Categories: all, photos, videos, music, documents, shared_by_me -->
                 <div v-else>
+                  <!-- Storage debug banner (shows exact HTTP error on phone) -->
+                  <div v-if="storageDebugMsg" class="mb-3 p-3 rounded-xl bg-[#ff453a]/10 border border-[#ff453a]/30 text-[11px] text-[#ff9f0a] font-mono break-words">
+                    {{ storageDebugMsg }}
+                  </div>
                   <!-- Empty State -->
                   <div v-if="filteredFiles.length === 0" class="text-center py-12 text-[#8e8e93] text-xs space-y-2">
                     <i class="fa-regular fa-folder-open text-2xl opacity-40"></i>
@@ -3019,6 +3023,7 @@
         // ================= Storage Module (Ubuntu vps2 Central Pool) =================
         const selectedStorageServerId = ref('vps2');
         const files = ref([]);
+        const storageDebugMsg = ref('');
 
         const currentStorageServer = computed(() => {
           if (!servers.value || servers.value.length === 0) return null;
@@ -3293,6 +3298,7 @@
           if (folderPath !== undefined) {
             currentFolder.value = folderPath;
           }
+          storageDebugMsg.value = '';
           if (selectedStorageCategory.value === 'trash') {
             await fetchTrashList();
             return;
@@ -3306,8 +3312,16 @@
                 try { f.name = decodeURIComponent(f.name); } catch(e) {}
                 return f;
               });
+              if (files.value.length === 0) storageDebugMsg.value = 'API OK (200) nhưng agent trả 0 file. Disk vps2 vẫn dùng ~14GB nên data còn trên ổ, kiểm tra agent/tunnel.';
+            } else {
+              const txt = await res.text().catch(() => '');
+              let why = txt.slice(0, 200);
+              try { const j = JSON.parse(txt); why = j.error || why; } catch (e) {}
+              storageDebugMsg.value = `Lỗi tải file: HTTP ${res.status} — ${why}`;
+              files.value = [];
             }
           } catch (e) {
+            storageDebugMsg.value = 'Lỗi mạng khi gọi /api/files/list: ' + (e.message || e);
             files.value = [];
           }
         }
@@ -4239,6 +4253,7 @@
           deleteSelectedFiles,
           uploadStatus,
           loadFilesForSelectedServer,
+          storageDebugMsg,
           handleFileSelected,
           getDownloadUrl,
           getPreviewUrl,
