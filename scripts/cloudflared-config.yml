@@ -9,11 +9,11 @@ credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID>.json
 
 # Zero-Egress Ingress Routing to Agent port 8085
 ingress:
-  # VPS 1 (Tokyo Windows Server 2022)
+  # VPS 1 (Kuala Lumpur Windows Server 2022)
   - hostname: vps1.hoangngocbach.id.vn
     service: http://localhost:8085
 
-  # VPS 2 (Ubuntu 22.04 Beszel Hub)
+  # VPS 2 (Debian 12)
   - hostname: vps2.hoangngocbach.id.vn
     service: http://localhost:8085
 

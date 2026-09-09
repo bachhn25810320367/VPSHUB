@@ -8,12 +8,12 @@ const DEFAULT_SERVERS = [
   {
     id: "vps1",
     name: "WindowServer",
-    hostname: "vaxlouvm",
+    hostname: "WindowVM",
     os: "windows",
     os_display: "Windows Server 2022 Datacenter",
     cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
-    ip: "20.44.176.166",
-    location: "Tokyo, JP",
+    ip: "85.211.193.75",
+    location: "Kuala Lumpur, MY",
     tunnelUrl: "https://vps1.hoangngocbach.id.vn",
     created_at: 1788517427,
     boot_time: 1788535482,
@@ -28,12 +28,12 @@ const DEFAULT_SERVERS = [
   },
   {
     id: "vps2",
-    name: "Ubuntu",
-    hostname: "vlinuxvm",
+    name: "Debian",
+    hostname: "DebianVM",
     os: "linux",
-    os_display: "Ubuntu 22.04.5 LTS",
+    os_display: "Debian 12 (bookworm)",
     cpu_model: "AMD EPYC 7763 64-Core Processor (2)",
-    ip: "20.89.130.95",
+    ip: "20.196.198.124",
     location: "East Asia",
     tunnelUrl: "https://vps2.hoangngocbach.id.vn",
     created_at: 1788509039,
@@ -545,7 +545,7 @@ export async function onRequest(context) {
         {
           id: "exp-1",
           category: "VPS",
-          title: "VPS 1 (Tokyo Win 2022)",
+          title: "VPS 1 (Kuala Lumpur Win 2022)",
           amount: 140000,
           currency: "VND",
           billingCycle: "monthly",
@@ -555,7 +555,7 @@ export async function onRequest(context) {
         {
           id: "exp-2",
           category: "VPS",
-          title: "VPS 2 (Ubuntu 22.04 LTS)",
+          title: "VPS 2 (Debian 12)",
           amount: 140000,
           currency: "VND",
           billingCycle: "monthly",
@@ -776,7 +776,7 @@ export async function onRequest(context) {
     const fileName = url.searchParams.get("path") || url.searchParams.get("name") || url.searchParams.get("file_name") || url.searchParams.get("file") || "";
     if (!fileName) return jsonResponse({ error: "Missing file name or path" }, 400);
     if (vpsId === "vps1") {
-      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2).", vps_id: "vps1" }, 400);
+      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Storage pool is hosted on Debian (vps2).", vps_id: "vps1" }, 400);
     }
     let srv = DEFAULT_SERVERS.find(s => s.id === vpsId || s.id === vpsId.toLowerCase()) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
@@ -806,7 +806,7 @@ export async function onRequest(context) {
     const vpsId = url.searchParams.get("vps_id") || "vps2";
     const relPath = url.searchParams.get("path") || "";
     if (vpsId === "vps1") {
-      return jsonResponse({ files: [], total: 0, note: "WindowServer (vps1) is compute-only. Storage pool is hosted on Ubuntu (vps2)." }, 200);
+      return jsonResponse({ files: [], total: 0, note: "WindowServer (vps1) is compute-only. Storage pool is hosted on Debian (vps2)." }, 200);
     }
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";
@@ -825,7 +825,7 @@ export async function onRequest(context) {
     const vpsId = url.searchParams.get("vps_id") || "vps2";
     const targetDir = url.searchParams.get("dir") || url.searchParams.get("path") || "";
     if (vpsId === "vps1") {
-      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Please upload files to Ubuntu (vps2)." }, 400);
+      return jsonResponse({ error: "WindowServer (vps1) is compute-only. Please upload files to Debian (vps2)." }, 400);
     }
     const srv = DEFAULT_SERVERS.find(s => s.id === vpsId) || DEFAULT_SERVERS.find(s => s.id === "vps2") || DEFAULT_SERVERS[0];
     const secret = env.AGENT_SECRET || "hoangngocbach-secret-2026";

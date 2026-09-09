@@ -507,7 +507,7 @@
                 <!-- Apple Style Series Legend -->
                 <div v-if="chartMode === 'cpu'" class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> WindowServer</span>
-                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> Ubuntu</span>
+                  <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#8e8e93] inline-block rounded-full"></span> Debian</span>
                 </div>
                 <div v-else class="flex items-center gap-4 text-xs text-[#8e8e93] mt-2">
                   <span class="flex items-center gap-1.5"><span class="w-2.5 h-0.5 bg-[#0a84ff] inline-block rounded-full"></span> Inbound RX</span>
@@ -660,8 +660,8 @@
                   <div class="flex items-center justify-center w-9 h-9 rounded-[10px] bg-white/[0.06] border border-white/10 text-white group-hover:border-[#0a84ff]/50 transition-all">
                     <!-- Windows -->
                     <i v-if="srv.id === 'vps1' || srv.os === 'windows'" class="fa-brands fa-windows text-[#0a84ff] text-base"></i>
-                    <!-- Ubuntu -->
-                    <i v-else-if="srv.id === 'vps2' || (srv.name && srv.name.toLowerCase().includes('ubuntu'))" class="fa-brands fa-ubuntu text-[#e95420] text-lg"></i>
+                    <!-- Debian -->
+                    <i v-else-if="srv.id === 'vps2' || (srv.name && srv.name.toLowerCase().includes('debian'))" class="fa-brands fa-linux text-[#ff9f0a] text-lg"></i>
                     <i v-else class="fa-brands fa-linux text-[#ff9f0a] text-base"></i>
                   </div>
                   <div>
@@ -2260,7 +2260,7 @@
         <div class="space-y-3.5 text-xs">
           <div>
             <label class="text-[#8e8e93] block mb-1">Contract / Node Label</label>
-            <input v-model="newExpense.title" type="text" placeholder="e.g. Tokyo Win VPS 2022" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3.5 py-2 text-white outline-none focus:border-[#0a84ff] transition-colors">
+            <input v-model="newExpense.title" type="text" placeholder="e.g. Kuala Lumpur Win VPS 2022" class="w-full bg-[#1c1c1e] border border-white/10 rounded-[10px] px-3.5 py-2 text-white outline-none focus:border-[#0a84ff] transition-colors">
           </div>
           <div>
             <label class="text-[#8e8e93] block mb-1">Amount (VND)</label>
@@ -2680,8 +2680,8 @@
             id: 'vps1',
             name: 'WindowServer',
             os: 'windows',
-            ip: '20.44.176.166',
-            location: 'Tokyo, JP',
+            ip: '85.211.193.75',
+            location: 'Kuala Lumpur, MY',
             tunnel_url: 'https://vps1.hoangngocbach.id.vn',
             created_at: 1788517427,
             boot_time: 1788535482,
@@ -2696,9 +2696,9 @@
           },
           {
             id: 'vps2',
-            name: 'Ubuntu',
+            name: 'Debian',
             os: 'linux',
-            ip: '20.89.130.95',
+            ip: '20.196.198.124',
             location: 'East Asia',
             tunnel_url: 'https://vps2.hoangngocbach.id.vn',
             created_at: 1788509039,
@@ -2912,7 +2912,7 @@
                   pointHoverRadius: 5
                 },
                 {
-                  label: 'Ubuntu',
+                  label: 'Debian',
                   data: vps2Data,
                   borderColor: '#8e8e93',
                   backgroundColor: 'transparent',
@@ -3020,7 +3020,7 @@
           });
         }
 
-        // ================= Storage Module (Ubuntu vps2 Central Pool) =================
+        // ================= Storage Module (Debian vps2 Central Pool) =================
         const selectedStorageServerId = ref('vps2');
         const files = ref([]);
         const storageDebugMsg = ref('');
@@ -3271,7 +3271,7 @@
         async function triggerRemoteDownload() {
           if (!remoteDownloadUrl.value) return;
           isRemoteDownloading.value = true;
-          remoteDownloadMsg.value = 'Starting remote download on Ubuntu...';
+          remoteDownloadMsg.value = 'Starting remote download on Debian...';
           remoteDownloadSuccess.value = false;
           try {
             const res = await fetch(`/api/files/remote-download?vps_id=vps2&url=${encodeURIComponent(remoteDownloadUrl.value)}`, {
@@ -3872,7 +3872,7 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 vps_id: 'vps2',
-                vps_name: 'Ubuntu',
+                vps_name: 'Debian',
                 file_name: target.path || target.name,
                 file_size: target.size || 0,
                 tunnel_url: 'https://vps2.hoangngocbach.id.vn',
@@ -3983,8 +3983,8 @@
 
         // ================= Expenses Module =================
         const expenses = ref([
-          { id: 'exp-1', category: 'VPS', title: 'VPS 1 (Tokyo - Windows Server 2022)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-20', status: 'paid' },
-          { id: 'exp-2', category: 'VPS', title: 'VPS 2 (Ubuntu 22.04 LTS)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-25', status: 'unpaid' },
+          { id: 'exp-1', category: 'VPS', title: 'VPS 1 (Kuala Lumpur - Windows Server 2022)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-20', status: 'paid' },
+          { id: 'exp-2', category: 'VPS', title: 'VPS 2 (Debian 12)', amount: 140000, billingCycle: 'monthly', dueDate: '2026-09-25', status: 'unpaid' },
           { id: 'exp-4', category: 'Domain', title: 'Domain hoangngocbach.id.vn', amount: 0, billingCycle: 'yearly', dueDate: '2027-09-01', status: 'paid' }
         ]);
 

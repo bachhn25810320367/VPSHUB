@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =====================================================================
-# VPS Agent Deployment Script for Linux (Ubuntu 22.04 & Debian 12)
+# VPS Agent Deployment Script for Linux (Debian 12)
 # =====================================================================
 set -e
 
 VPS_ID="${1:-vps2}"
-VPS_NAME="${2:-VPS 2 (Ubuntu Beszel Hub)}"
+VPS_NAME="${2:-VPS 2 (Debian)}"
 HUB_URL="${3:-https://app.hoangngocbach.id.vn/api/telemetry}"
 SECRET="${4:-secret-token-change-me}"
 INSTALL_DIR="/opt/vps-agent"

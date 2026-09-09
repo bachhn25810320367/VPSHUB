@@ -3,10 +3,10 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/fu
 const SERVERS_CONFIG = [
   {
     id: "vps1",
-    name: "VPS 1 (Tokyo)",
+    name: "VPS 1 (Kuala Lumpur)",
     os: "Windows Server 2022",
-    ip: "20.44.176.166",
-    location: "Tokyo, Japan",
+    ip: "85.211.193.75",
+    location: "Kuala Lumpur, Malaysia",
     tunnelUrl: "https://vps1.hoangngocbach.id.vn",
     quotaGB: 100, // Azure Egress Free Tier
     ramMB: 1024,
@@ -14,10 +14,10 @@ const SERVERS_CONFIG = [
   },
   {
     id: "vps2",
-    name: "VPS 2 (Ubuntu)",
-    os: "Ubuntu 22.04 LTS",
-    ip: "20.89.130.95",
-    location: "East Asia",
+    name: "VPS 2 (Debian)",
+    os: "Debian 12",
+    ip: "20.196.198.124",
+    location: "Seoul, South Korea",
     tunnelUrl: "https://vps2.hoangngocbach.id.vn",
     quotaGB: 100,
     ramMB: 1024,

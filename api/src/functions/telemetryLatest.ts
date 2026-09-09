@@ -2,8 +2,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/fu
 import { initCosmos, memoryStore } from "../cosmosClient.js";
 
 const DEFAULT_SERVERS = [
-  { id: "vps1", name: "VPS 1 (Tokyo - Windows Server 2022)", os: "windows", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
-  { id: "vps2", name: "VPS 2 (Ubuntu 22.04 - Beszel)", os: "linux", tunnelUrl: "https://vps2.hoangngocbach.id.vn" }
+  { id: "vps1", name: "VPS 1 (Kuala Lumpur - Windows Server 2022)", os: "windows", tunnelUrl: "https://vps1.hoangngocbach.id.vn" },
+  { id: "vps2", name: "VPS 2 (Debian 12)", os: "linux", tunnelUrl: "https://vps2.hoangngocbach.id.vn" }
 ];
 
 export async function telemetryLatestHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {

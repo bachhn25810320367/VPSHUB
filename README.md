@@ -1,9 +1,9 @@
-# VPS HUB - Hệ Thống Quản Lý 3 VPS AMD EPYC & Chi Tiêu (0đ Duy Trì, Siêu Nhẹ RAM)
+# VPS HUB - Hệ Thống Quản Lý 2 VPS Azure & Chi Tiêu (0đ Duy Trì, Siêu Nhẹ RAM)
 
-Hệ thống quản lý 3 node VPS chuyên biệt:
-- **VPS 1 (Tokyo - 20.44.176.166):** Windows Server 2022 (1 Core / 2 Threads EPYC 7763, 1GB RAM)
-- **VPS 2 (East Asia - 20.89.130.95):** Ubuntu 22.04 LTS (Chạy Beszel Hub cổng :8080)
-- **VPS 3 (Southeast Asia):** Debian 12 (Storage Worker)
+Hệ thống quản lý 2 node VPS chuyên biệt:
+- **VPS 1 (Kuala Lumpur - 85.211.193.75):** Windows Server 2022 (WindowVM) (1 Core / 2 Threads EPYC 7763, 1GB RAM)
+- **VPS 2 (Seoul - 20.196.198.124):** Debian 12 (bookworm) (Chạy Beszel Hub cổng :8080)
+- **VPS 3:** đã gộp vào VPS 2 (09/2026)
 
 ---
 
@@ -30,7 +30,7 @@ Hệ thống quản lý 3 node VPS chuyên biệt:
       ▼                        ▼                        ▼
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
 │    VPS 1     │         │    VPS 2     │         │    VPS 3     │
-│ (Win2022)    │         │ (Ubuntu)     │         │ (Debian 12)  │
+│ (Win2022)    │         │ (Debian 12)  │         │ (Debian 12)  │
 ├──────────────┤         ├──────────────┤         ├──────────────┤
 │ Go Agent     │         │ Go Agent     │         │ Go Agent     │
 │ Port: 8085   │         │ Port: 8085   │         │ Port: 8085   │
@@ -46,7 +46,7 @@ Hệ thống quản lý 3 node VPS chuyên biệt:
 ### BƯỚC 1: Biên dịch và chạy Go Agent trên 3 VPS
 
 #### 1. Biên dịch Agent (Cross-compile cho cả Linux & Windows):
-Trên máy có cài Go (hoặc compile trực tiếp trên VPS Ubuntu):
+Trên máy có cài Go (hoặc compile trực tiếp trên VPS Debian):
 
 ```bash
 cd agent
@@ -59,7 +59,7 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o vps-agent-windows.exe .
 ```
 *(Cờ `-ldflags="-s -w"` sẽ xóa toàn bộ debug symbol thừa, giúp file binary siêu nhỏ chỉ ~7MB và khởi động trong 2ms).*
 
-#### 2. Cài đặt trên VPS 2 (Ubuntu) & VPS 3 (Debian):
+#### 2. Cài đặt trên VPS 2 (Debian):
 Copy file `vps-agent-linux` lên thư mục `/opt/vps-agent/` và tạo service:
 
 ```bash
@@ -81,7 +81,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/vps-agent
-ExecStart=/opt/vps-agent/vps-agent -port 8085 -vps-id vps2 -vps-name "VPS 2 (Ubuntu)" -hub-url https://hoangngocbach.id.vn/api/telemetry -secret secret-token-change-me
+ExecStart=/opt/vps-agent/vps-agent -port 8085 -vps-id vps2 -vps-name "VPS 2 (Debian)" -hub-url https://hoangngocbach.id.vn/api/telemetry -secret secret-token-change-me
 Restart=always
 RestartSec=5
 
@@ -97,14 +97,14 @@ sudo systemctl enable --now vps-agent
 sudo systemctl status vps-agent
 ```
 
-#### 3. Cài đặt trên VPS 1 (Windows Server 2022 - Tokyo):
+#### 3. Cài đặt trên VPS 1 (Windows Server 2022 - Kuala Lumpur):
 Tạo thư mục `C:\vps-agent`, copy file `vps-agent-windows.exe` vào đó.
 Mở PowerShell (Run as Administrator):
 
 ```powershell
 # Chạy thử nghiệm:
 cd C:\vps-agent
-.\vps-agent-windows.exe -port 8085 -vps-id vps1 -vps-name "VPS 1 (Tokyo)" -hub-url https://hoangngocbach.id.vn/api/telemetry -secret secret-token-change-me
+.\vps-agent-windows.exe -port 8085 -vps-id vps1 -vps-name "VPS 1 (Kuala Lumpur)" -hub-url https://hoangngocbach.id.vn/api/telemetry -secret secret-token-change-me
 ```
 
 Để chạy ngầm vĩnh viễn cùng Windows:
@@ -124,7 +124,7 @@ Mỗi VPS chỉ cần map subdomain vào cổng `8085`:
       service: http://localhost:8085
   ```
 
-* **Trên VPS 2 (Ubuntu):**
+* **Trên VPS 2 (Debian):**
   ```yaml
   ingress:
     - hostname: vps2.hoangngocbach.id.vn

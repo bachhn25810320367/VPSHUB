@@ -25,7 +25,7 @@ func getEnvOrDefault(key, defaultVal string) string {
 func main() {
 	port := flag.String("port", getEnvOrDefault("AGENT_PORT", "8085"), "Port for agent HTTP server")
 	vpsID := flag.String("vps-id", getEnvOrDefault("VPS_ID", "vps1"), "Unique identifier for this VPS")
-	vpsName := flag.String("vps-name", getEnvOrDefault("VPS_NAME", "VPS-Tokyo"), "Friendly name for this VPS")
+	vpsName := flag.String("vps-name", getEnvOrDefault("VPS_NAME", "VPS-KualaLumpur"), "Friendly name for this VPS")
 	hubURL := flag.String("hub-url", getEnvOrDefault("HUB_URL", "https://app.hoangngocbach.id.vn/api/telemetry"), "Azure Functions telemetry URL")
 	secret := flag.String("secret", getEnvOrDefault("AGENT_SECRET", "secret-token-change-me"), "Shared secret token for authentication")
 	intervalStr := flag.String("interval", getEnvOrDefault("TELEMETRY_INTERVAL", "30s"), "Interval between telemetry reports")

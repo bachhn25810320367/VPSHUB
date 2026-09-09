@@ -14,7 +14,7 @@ export const memoryStore = {
     {
       id: "exp-1",
       category: "VPS",
-      title: "VPS 1 (Tokyo - Windows Server 2022)",
+      title: "VPS 1 (Kuala Lumpur - Windows Server 2022)",
       amount: 140000,
       currency: "VND",
       billingCycle: "monthly",
@@ -25,7 +25,7 @@ export const memoryStore = {
     {
       id: "exp-2",
       category: "VPS",
-      title: "VPS 2 (Ubuntu 22.04 - Beszel Hub)",
+      title: "VPS 2 (Debian 12)",
       amount: 140000,
       currency: "VND",
       billingCycle: "monthly",

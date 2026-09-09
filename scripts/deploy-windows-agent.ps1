@@ -1,11 +1,11 @@
 # =====================================================================
-# VPS Agent Deployment Script for Windows Server 2022 (Tokyo Node)
+# VPS Agent Deployment Script for Windows Server 2022 (Kuala Lumpur Node)
 # =====================================================================
 # Run this script in an Administrator PowerShell prompt on the Windows VPS
 
 param (
     [string]$VpsId = "vps1",
-    [string]$VpsName = "VPS 1 (Tokyo Win 2022)",
+    [string]$VpsName = "VPS 1 (Kuala Lumpur Win 2022)",
     [string]$HubUrl = "https://app.hoangngocbach.id.vn/api/telemetry",
     [string]$Secret = "secret-token-change-me",
     [string]$InstallDir = "C:\vps-agent"
